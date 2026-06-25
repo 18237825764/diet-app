@@ -1402,8 +1402,10 @@ function renderMeals(){
     let h = '<div class="meal-head">'
       + '<div class="meal-title"><div class="meal-icon">'+(MEAL_ICON[m.key]||"•")+'</div>'
       + '<div><div class="meal-name">'+m.name+'</div><div class="meal-sub">'+m.sub+'</div></div></div>'
-      + (canEdit ? '<button class="meal-edit-btn'+(m.overridden?' dirty':'')+'" onclick="openEditModal(\''+m.key+'\')">'+(m.overridden?'已改':'编辑')+'</button>' : '')
-      + '<div class="meal-badge'+(allDone?' all-done':'')+'">'+doneCount+'/'+m.foods.length+'</div></div>';
+      + '<div style="display:flex; align-items:center; gap:6px">'
+      + (canEdit ? '<button class="meal-edit-btn'+(m.overridden?' dirty':'')+'" onclick="openEditModal(\''+m.key+'\')">'+(m.overridden?'已改':'✏️编辑')+'</button>' : '')
+      + '<div class="meal-badge'+(allDone?' all-done':'')+'">'+doneCount+'/'+m.foods.length+'</div>'
+      + '</div></div>';
     m.foods.forEach((f, fi)=>{
       const key = isCustom ? (state.selectedDay+"|custom|"+fi) : (state.selectedDay+"|"+mi+"|"+fi);
       const done = state.done[key];
@@ -1555,7 +1557,30 @@ try{
 }catch(e){}
 
 /* PWA */
-if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{
+    navigator.serviceWorker.register("sw.js").then(reg=>{
+      // 检测到新版 SW, 立即激活
+      reg.addEventListener("updatefound", ()=>{
+        const nw = reg.installing;
+        if(nw){
+          nw.addEventListener("statechange", ()=>{
+            if(nw.state==="installed" && navigator.serviceWorker.controller){
+              // 有新版本, 提示用户刷新
+              if(confirm("App 有新版本,立即可用!\n点确定刷新加载新版本。")){
+                location.reload();
+              }
+            }
+          });
+        }
+      });
+    }).catch(()=>{});
+    // 每小时检查一次更新
+    setInterval(()=>{
+      navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
+    }, 3600000);
+  });
+}
 
 /* 启动: 自动定位今天 */
 state.selectedDay = autoSelectToday();
