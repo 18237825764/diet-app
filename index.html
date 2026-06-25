@@ -443,7 +443,8 @@
       <button class="ef-add-btn" onclick="addFoodToMeal()">添加</button>
     </div>
     <button class="modal-footer-btn" onclick="saveMealEdit()">完成</button>
-    <button class="modal-reset" onclick="resetMeal()">恢复默认菜单</button>
+    <div class="footer-note" style="margin-top:10px; font-size:11px">💡 这只是对今天的临时调整,默认菜单永远保留。想全部恢复,点下面按钮。</div>
+    <button class="modal-reset" onclick="resetMeal()">恢复这一餐为默认</button>
   </div>
 </div>
 
@@ -568,6 +569,13 @@
         </div>
         <button class="setting-btn" onclick="document.getElementById('importFile').click()">导入</button>
         <input type="file" id="importFile" accept=".txt" style="display:none" onchange="importData(event)">
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="sr-label">恢复全部默认菜单</div>
+          <div class="sr-desc">一键清掉所有自定义改动,回到原始菜单</div>
+        </div>
+        <button class="setting-btn" onclick="resetAllMeals()">恢复</button>
       </div>
       <div class="setting-row">
         <div>
@@ -938,11 +946,25 @@ function removeEditFood(idx){
 }
 
 function saveMealEdit(){
-  if(editingFoods.length===0){ if(!confirm("这一餐没有食物,确定保存为空吗?")) return; }
-  if(!state.mealOverrides[state.selectedDay]) state.mealOverrides[state.selectedDay] = {};
-  // 写入. 若内容跟默认完全一样, 则删除override保持干净
-  state.mealOverrides[state.selectedDay][editingMealKey] = editingFoods;
-  // 清理这餐的打卡记录(因为索引变了)
+  // 保护1: 不允许保存空菜单
+  if(editingFoods.length===0){
+    alert("这一餐至少要保留 1 项食物。\n默认菜单是基线,不会被删除。");
+    return;
+  }
+  // 保护2: 跟默认完全一样就不存覆盖(保持干净)
+  const defaultFoods = buildDefaultMeal(state.selectedDay, editingMealKey);
+  const sameAsDefault = JSON.stringify(editingFoods.map(stripProps)) === JSON.stringify(defaultFoods.map(stripProps));
+  if(sameAsDefault){
+    // 删掉覆盖,回到默认
+    if(state.mealOverrides[state.selectedDay]){
+      delete state.mealOverrides[state.selectedDay][editingMealKey];
+      if(Object.keys(state.mealOverrides[state.selectedDay]).length===0) delete state.mealOverrides[state.selectedDay];
+    }
+  } else {
+    if(!state.mealOverrides[state.selectedDay]) state.mealOverrides[state.selectedDay] = {};
+    state.mealOverrides[state.selectedDay][editingMealKey] = editingFoods;
+  }
+  // 清理这餐的打卡记录(因为索引可能变了)
   const mealsNew = buildMeals(state.selectedDay);
   const mi = mealsNew.findIndex(m=>m.key===editingMealKey);
   Object.keys(state.done).forEach(k=>{
@@ -952,6 +974,34 @@ function saveMealEdit(){
   saveState();
   closeEditModal();
   render();
+}
+
+/* 工具: 去掉运行时附加字段, 只留核心营养字段用于比较 */
+function stripProps(f){
+  return {name:f.name, detail:f.detail||"", protein:f.protein, cal:f.cal};
+}
+
+/* 取某天某餐的"默认版"菜单(不受 override 影响) */
+function buildDefaultMeal(dayKey, mealKey){
+  const wd = WEEK.find(w=>w.key===dayKey);
+  const plan = getPlan(dayKey);
+  const dinnerCfg = DINNERS[plan];
+  if(mealKey==="breakfast") return BASE.breakfast.slice();
+  if(mealKey==="lunch"){
+    let lf = [];
+    if(wd.type==="std"){ lf = getLunch("std").slice().concat(dinnerCfg.lunchExtra); }
+    else if(wd.type==="cheat-noodle"){ lf = getLunch("cheat-noodle"); }
+    else{ lf = getLunch("cheat-bbq"); }
+    return lf;
+  }
+  if(mealKey==="dinner"){
+    if(wd.type==="std") return dinnerCfg.dinner.slice();
+    return [
+      {name:"番茄 / 黄瓜 2–3 个", detail:"照常", protein:2, cal:60},
+      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:24, cal:110, pw:true},
+    ];
+  }
+  return [];
 }
 
 function resetMeal(){
@@ -1076,6 +1126,22 @@ function clearAllData(){
   state = loadState();
   state.selectedDay = autoSelectToday();
   saveState(); render();
+}
+
+/* 紧急止血: 恢复全部默认菜单(只清 mealOverrides 和 custom, 不动打卡记录里的核心) */
+function resetAllMeals(){
+  if(!confirm("恢复全部 7 天的默认菜单?\n所有你对早/中/晚餐的自定义改动都会清空,回到原始减脂方案。\n(打卡记录和体重会保留)")) return;
+  state.mealOverrides = {};
+  state.custom = {};
+  // 清掉所有跟 custom 餐卡相关的打卡 (key 里有"|3|"的是 custom)
+  // 注意 buildMeals 的 mi 顺序: 0早 1午 2晚 3自定义
+  Object.keys(state.done).forEach(k=>{
+    const parts = k.split("|");
+    if(parts.length>=2 && parts[1]==="3"){ delete state.done[k]; }
+  });
+  saveState();
+  render();
+  alert("已恢复全部默认菜单 ✓");
 }
 
 /* ============ 本周总结 ============ */
@@ -1226,7 +1292,31 @@ const MEAL_ICON = {breakfast:"🌅", lunch:"☀️", dinner:"🌙"};
 const STORE_KEY = "diet_pwa_v2";
 let state = loadState();
 function loadState(){
-  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw){
+    const s = JSON.parse(raw);
+    // 数据补全 + 修复(防御性)
+    if(!s.selectedDay) s.selectedDay = WEEK[0].key;
+    if(!s.dinnerPlan) s.dinnerPlan = {};
+    if(!s.done) s.done = {};
+    if(s.defaultPlan===undefined) s.defaultPlan = "B";
+    if(!s.weights) s.weights = [];
+    if(!s.mealOverrides) s.mealOverrides = {};
+    // 修复: 把所有空覆盖/损坏覆盖删掉(防止空菜单bug)
+    Object.keys(s.mealOverrides).forEach(dk=>{
+      if(typeof s.mealOverrides[dk] !== "object" || s.mealOverrides[dk]===null){
+        delete s.mealOverrides[dk]; return;
+      }
+      Object.keys(s.mealOverrides[dk]).forEach(mk=>{
+        const foods = s.mealOverrides[dk][mk];
+        if(!Array.isArray(foods) || foods.length===0){
+          delete s.mealOverrides[dk][mk];
+        }
+      });
+      if(Object.keys(s.mealOverrides[dk]).length===0) delete s.mealOverrides[dk];
+    });
+    if(!s.custom) s.custom = {};
+    return s;
+  }}catch(e){}
   return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"B", weights:[], mealOverrides:{}, custom:{} };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
