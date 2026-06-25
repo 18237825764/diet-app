@@ -325,9 +325,89 @@
   .sp-feedback .grade.a{background:#7BC97B; color:#fff}
   .sp-feedback .grade.b{background:var(--cheat); color:#fff}
   .sp-feedback .grade.c{background:var(--warm); color:#fff}
+
+  /* ===== 餐单编辑器 ===== */
+  .meal-edit-btn{
+    background:var(--bg); border:1px solid var(--line); color:var(--ink-soft);
+    padding:5px 11px; border-radius:var(--radius-s); font-size:11px; font-weight:600;
+    cursor:pointer; margin-left:8px;
+  }
+  .meal-edit-btn:active{transform:scale(.95)}
+  .meal-edit-btn.dirty{color:var(--vital); border-color:var(--vital)}
+
+  /* 编辑弹窗 */
+  .modal-mask{
+    position:fixed; inset:0; z-index:100; background:rgba(14,42,71,.45);
+    backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .modal-mask.show{display:flex; animation:fadeIn .25s}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{
+    background:var(--card); width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
+    border-radius:var(--radius-l) var(--radius-l) 0 0; padding:18px 16px 24px;
+    animation:slideUp .3s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes slideUp{from{transform:translateY(40px); opacity:.5}to{transform:translateY(0); opacity:1}}
+  .modal-title{font-size:17px; font-weight:700; color:var(--ink); margin-bottom:4px}
+  .modal-sub{font-size:12px; color:var(--ink-faint); margin-bottom:16px}
+  .modal-close{
+    position:absolute; right:14px; top:14px; background:var(--band); border:none;
+    width:30px; height:30px; border-radius:50%; font-size:16px; cursor:pointer; color:var(--ink-soft);
+  }
+  .ef-row{
+    display:flex; gap:8px; align-items:center; padding:10px; background:var(--bg);
+    border-radius:var(--radius-m); margin-bottom:8px; position:relative;
+  }
+  .ef-name{flex:1; font-size:14px; color:var(--ink); font-weight:500}
+  .ef-name .ef-gram{font-size:11px; color:var(--ink-faint); margin-left:4px}
+  .ef-mac{font-size:12px; color:var(--ink-soft); text-align:right; min-width:78px}
+  .ef-mac .ef-p{color:var(--vital); font-weight:700}
+  .ef-del{
+    background:var(--warm-soft); color:var(--warm); border:none; width:28px; height:28px;
+    border-radius:50%; font-size:14px; cursor:pointer; min-width:28px;
+  }
+  .ef-add-row{display:flex; gap:6px; margin-top:10px; position:relative}
+  .ef-add-input{flex:1; padding:11px 12px; border:1.5px solid var(--line); border-radius:var(--radius-m); background:var(--card); color:var(--ink); font-size:13px}
+  .ef-add-input:focus{outline:none; border-color:var(--vital)}
+  .ef-add-btn{padding:11px 16px; background:var(--ink); color:#fff; border:none; border-radius:var(--radius-m); font-size:13px; font-weight:600; cursor:pointer}
+  .ef-suggest{position:absolute; top:calc(100% + 3px); left:0; right:64px; z-index:20; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-m); box-shadow:var(--shadow); max-height:200px; overflow-y:auto; display:none}
+  .ef-suggest.show{display:block}
+  .ef-suggest .es-item{padding:10px 12px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; justify-content:space-between; align-items:center}
+  .ef-suggest .es-item:last-child{border-bottom:none}
+  .ef-suggest .es-item:active{background:var(--vital-soft)}
+  .ef-suggest .es-name{font-size:13px; color:var(--ink)}
+  .ef-suggest .es-mac{font-size:10.5px; color:var(--vital); font-weight:600}
+  .ef-empty{text-align:center; color:var(--ink-faint); font-size:12px; padding:14px}
+  .modal-footer-btn{
+    width:100%; margin-top:14px; padding:14px; background:var(--vital); color:#fff; border:none;
+    border-radius:var(--radius-m); font-size:15px; font-weight:600; cursor:pointer;
+  }
+  .modal-footer-btn:active{transform:scale(.98)}
+  .modal-reset{
+    width:100%; margin-top:8px; padding:11px; background:transparent; color:var(--ink-faint);
+    border:1px solid var(--line); border-radius:var(--radius-m); font-size:12px; cursor:pointer;
+  }
 </style>
 </head>
 <body>
+
+<!-- 餐单编辑器弹窗 -->
+<div class="modal-mask" id="editModal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeEditModal()">✕</button>
+    <div class="modal-title" id="em-title">编辑早餐</div>
+    <div class="modal-sub" id="em-sub">添加/删除/调整食物,自动重算蛋白和热量</div>
+    <div id="em-list"></div>
+    <div class="ef-add-row">
+      <input id="em-add-input" class="ef-add-input" placeholder="加食物:输入虾/豆腐/饭..." autocomplete="off">
+      <div id="em-suggest" class="ef-suggest"></div>
+      <button class="ef-add-btn" onclick="addFoodToMeal()">添加</button>
+    </div>
+    <button class="modal-footer-btn" onclick="saveMealEdit()">完成</button>
+    <button class="modal-reset" onclick="resetMeal()">恢复默认菜单</button>
+  </div>
+</div>
 
 <!-- ===== 顶部英雄区 ===== -->
 <header class="hero">
@@ -672,6 +752,152 @@ function addCustomToToday(){
   saveState(); updateStats(false);
 }
 
+/* ============ 餐单编辑器 ============ */
+let editingMealKey = null;     // 当前在编辑的餐 (breakfast/lunch/dinner)
+let editingFoods = [];          // 当前编辑中的食物列表(临时副本)
+
+const MEAL_LABELS = {breakfast:"早餐", lunch:"午餐", dinner:"晚餐"};
+
+function openEditModal(mealKey){
+  editingMealKey = mealKey;
+  // 拿当前生效的菜单(自定义版或默认版)
+  const meals = buildMeals(state.selectedDay);
+  const m = meals.find(x=>x.key===mealKey);
+  editingFoods = m.foods.map(f=>({...f}));  // 深拷贝
+  document.getElementById("em-title").textContent = "编辑" + (MEAL_LABELS[mealKey]||"");
+  const wd = WEEK.find(w=>w.key===state.selectedDay);
+  document.getElementById("em-sub").textContent = wd.name + " · " + (m.overridden?"你已自定义":"默认菜单") + " · 添加/删除/调整";
+  renderEditList();
+  document.getElementById("em-add-input").value = "";
+  document.getElementById("editModal").classList.add("show");
+}
+
+function closeEditModal(){
+  document.getElementById("editModal").classList.remove("show");
+  editingMealKey = null;
+  editingFoods = [];
+}
+
+function renderEditList(){
+  const c = document.getElementById("em-list");
+  if(editingFoods.length===0){
+    c.innerHTML = '<div class="ef-empty">这一餐还是空的,在下面添加食物吧</div>';
+    return;
+  }
+  c.innerHTML = editingFoods.map((f,i)=>{
+    return '<div class="ef-row">'
+      + '<div class="ef-name">'+f.name+'<span class="ef-gram">'+(f.detail||"")+'</span></div>'
+      + '<div class="ef-mac"><span class="ef-p num">'+f.protein+'</span>g · '+f.cal+'k</div>'
+      + '<button class="ef-del" onclick="removeEditFood('+i+')">✕</button>'
+      + '</div>';
+  }).join("");
+}
+
+/* 添加食物: 搜索食材库 */
+const emInput = document.getElementById("em-add-input");
+const emSugg = document.getElementById("em-suggest");
+emInput.addEventListener("input", ()=>{
+  const q = emInput.value.trim();
+  if(!q){ emSugg.classList.remove("show"); emSugg.innerHTML=""; return; }
+  const low = q.toLowerCase();
+  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,6);
+  if(hits.length===0){
+    emSugg.innerHTML = '<div class="es-item" style="color:var(--ink-faint);font-size:12px">没找到 · 点"添加"输入手动项 (按 100g 算)</div>';
+    emSugg.classList.add("show");
+    return;
+  }
+  emSugg.innerHTML = hits.map(f=>
+    '<div class="es-item" data-name="'+f.name+'">'
+    + '<span class="es-name">'+f.name+' <span style="color:var(--ink-faint);font-size:10px">('+f.cat+')</span></span>'
+    + '<span class="es-mac num">'+f.p+'g/'+f.c+'k per100g</span></div>'
+  ).join("");
+  emSugg.querySelectorAll(".es-item").forEach(el=>{
+    el.onclick = ()=>{
+      const fd = FOOD_DB.find(f=>f.name===el.dataset.name);
+      addFoodPrompt(fd);
+      emInput.value=""; emSugg.classList.remove("show");
+    };
+  });
+  emSugg.classList.add("show");
+});
+emInput.addEventListener("blur", ()=>{ setTimeout(()=>emSugg.classList.remove("show"), 150); });
+emInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addFoodToMeal(); } });
+
+function addFoodPrompt(fd){
+  const g = prompt("吃多少克? (按 100g 营养算)", "100");
+  if(!g) return;
+  const gn = parseFloat(g);
+  if(!gn || gn<=0){ alert("请输入数字"); return; }
+  const p = +(fd.p * gn / 100).toFixed(1);
+  const c = Math.round(fd.c * gn / 100);
+  editingFoods.push({
+    name: fd.name + " " + gn + "g",
+    detail: fd.cat + " · 自定义",
+    protein: p, cal: c, pw:false
+  });
+  renderEditList();
+}
+
+function addFoodToMeal(){
+  const q = emInput.value.trim();
+  if(!q){ return; }
+  // 没匹配库 → 手动输入(DEFAULT 蛋白 10g/100k,用户可后续删除重填)
+  const g = prompt("这是手动项,吃多少克?", "100");
+  if(!g) return;
+  const gn = parseFloat(g);
+  const p = parseFloat(prompt("每 100g 蛋白多少 g? (不知道填 0)", "10")) || 0;
+  const c = parseFloat(prompt("每 100g 热量多少 kcal?", "100")) || 0;
+  editingFoods.push({
+    name: q + " " + gn + "g",
+    detail: "手动 · 自定义",
+    protein: +(p*gn/100).toFixed(1),
+    cal: Math.round(c*gn/100),
+    pw:false
+  });
+  emInput.value=""; emSugg.classList.remove("show");
+  renderEditList();
+}
+
+function removeEditFood(idx){
+  editingFoods.splice(idx, 1);
+  renderEditList();
+}
+
+function saveMealEdit(){
+  if(editingFoods.length===0){ if(!confirm("这一餐没有食物,确定保存为空吗?")) return; }
+  if(!state.mealOverrides[state.selectedDay]) state.mealOverrides[state.selectedDay] = {};
+  // 写入. 若内容跟默认完全一样, 则删除override保持干净
+  state.mealOverrides[state.selectedDay][editingMealKey] = editingFoods;
+  // 清理这餐的打卡记录(因为索引变了)
+  const mealsNew = buildMeals(state.selectedDay);
+  const mi = mealsNew.findIndex(m=>m.key===editingMealKey);
+  Object.keys(state.done).forEach(k=>{
+    const parts = k.split("|");
+    if(parts[0]===state.selectedDay && parseInt(parts[1])===mi){ delete state.done[k]; }
+  });
+  saveState();
+  closeEditModal();
+  render();
+}
+
+function resetMeal(){
+  if(!confirm("恢复"+(MEAL_LABELS[editingMealKey]||"")+"为默认菜单?\n你的自定义会清空")) return;
+  if(state.mealOverrides[state.selectedDay]){
+    delete state.mealOverrides[state.selectedDay][editingMealKey];
+    if(Object.keys(state.mealOverrides[state.selectedDay]).length===0) delete state.mealOverrides[state.selectedDay];
+  }
+  // 清这餐打卡
+  const mealsNew = buildMeals(state.selectedDay);
+  const mi = mealsNew.findIndex(m=>m.key===editingMealKey);
+  Object.keys(state.done).forEach(k=>{
+    const parts = k.split("|");
+    if(parts[0]===state.selectedDay && parseInt(parts[1])===mi){ delete state.done[k]; }
+  });
+  saveState();
+  openEditModal(editingMealKey);  // 重开,显示默认菜单
+  render();
+}
+
 /* ============ 本周总结 ============ */
 function toggleSummary(){
   const t = document.getElementById("sumToggle");
@@ -821,22 +1047,37 @@ const STORE_KEY = "diet_pwa_v2";
 let state = loadState();
 function loadState(){
   try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
-  return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"B", weights:[] };
+  return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"B", weights:[], mealOverrides:{}, custom:{} };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function getPlan(dayKey){ return state.dinnerPlan[dayKey] || state.defaultPlan; }
+
+/* dayKey + mealKey(breakfast/lunch/dinner) → 用户自定义菜单, 缺省返回 null */
+function getMealOverride(dayKey, mealKey){
+  const m = state.mealOverrides[dayKey];
+  if(!m) return null;
+  return m[mealKey] || null;
+}
 
 function buildMeals(dayKey){
   const wd = WEEK.find(w=>w.key===dayKey);
   const plan = getPlan(dayKey);
   const dinnerCfg = DINNERS[plan];
   const meals = [];
-  meals.push({key:"breakfast", name:"早餐", sub:"启动蛋白合成", foods: BASE.breakfast.slice()});
+
+  function resolveMeal(mealKey, defaultFoods, name, sub){
+    const ov = getMealOverride(dayKey, mealKey);
+    return {key:mealKey, name, sub, foods: ov ? ov.slice() : defaultFoods, overridden: !!ov};
+  }
+
+  meals.push(resolveMeal("breakfast", BASE.breakfast.slice(), "早餐", "启动蛋白合成"));
+
   let lunchFoods;
   if(wd.type==="std"){ lunchFoods = getLunch("std").slice().concat(dinnerCfg.lunchExtra); }
   else if(wd.type==="cheat-noodle"){ lunchFoods = getLunch("cheat-noodle"); }
   else{ lunchFoods = getLunch("cheat-bbq"); }
-  meals.push({key:"lunch", name:"午餐", sub: typeTag(wd.type)||"主力", foods:lunchFoods});
+  meals.push(resolveMeal("lunch", lunchFoods, "午餐", typeTag(wd.type)||"主力"));
+
   let dinnerFoods;
   if(wd.type==="std"){ dinnerFoods = dinnerCfg.dinner.slice(); }
   else{
@@ -845,7 +1086,8 @@ function buildMeals(dayKey){
       {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:24, cal:110, pw:true},
     ];
   }
-  meals.push({key:"dinner", name:"晚餐", sub:"清淡 / 保肌", foods:dinnerFoods});
+  meals.push(resolveMeal("dinner", dinnerFoods, "晚餐", "清淡 / 保肌"));
+
   // 自定义食材(替换项)单独作为一张卡
   const customs = (state.custom && state.custom[dayKey]) || [];
   if(customs.length){
@@ -886,11 +1128,13 @@ function renderMeals(){
   meals.forEach((m, mi)=>{
     const doneCount = m.foods.filter((f,fi)=>state.done[state.selectedDay+"|"+mi+"|"+fi]).length;
     const allDone = doneCount===m.foods.length && m.foods.length>0;
+    const canEdit = (m.key!=="custom");  // custom 卡不放编辑
     const card = document.createElement("div");
     card.className = "meal";
     let h = '<div class="meal-head">'
       + '<div class="meal-title"><div class="meal-icon">'+(MEAL_ICON[m.key]||"•")+'</div>'
       + '<div><div class="meal-name">'+m.name+'</div><div class="meal-sub">'+m.sub+'</div></div></div>'
+      + (canEdit ? '<button class="meal-edit-btn'+(m.overridden?' dirty':'')+'" onclick="openEditModal(\''+m.key+'\')">'+(m.overridden?'已改':'编辑')+'</button>' : '')
       + '<div class="meal-badge'+(allDone?' all-done':'')+'">'+doneCount+'/'+m.foods.length+'</div></div>';
     m.foods.forEach((f, fi)=>{
       const key = state.selectedDay+"|"+mi+"|"+fi;
