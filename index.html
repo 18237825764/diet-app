@@ -277,6 +277,54 @@
   }
   .calc-add.show{display:block}
   .calc-add:active{transform:scale(.98)}
+
+  /* ===== 本周总结 ===== */
+  .summary-toggle{
+    width:100%; padding:14px; background:linear-gradient(135deg, var(--ink), #1a3a5c);
+    color:#fff; border:none; border-radius:var(--radius-l);
+    font-size:15px; font-weight:600; cursor:pointer; box-shadow:var(--shadow);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .summary-toggle:active{transform:scale(.98)}
+  .summary-toggle .st-chev{transition:transform .3s; font-size:12px; opacity:.8}
+  .summary-toggle.open .st-chev{transform:rotate(180deg)}
+  .summary-panel{margin-top:10px; display:none; animation:pop .3s}
+  .summary-panel.show{display:block}
+  .sp-card{background:var(--card); border-radius:var(--radius-l); padding:16px; box-shadow:var(--shadow); margin-bottom:11px}
+  .sp-title{font-size:13px; font-weight:700; color:var(--ink); margin-bottom:11px; display:flex; align-items:center; gap:6px}
+  .sp-title .sp-emoji{font-size:15px}
+  /* 达标网格 */
+  .sp-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+  .sp-cell{text-align:center}
+  .sp-cell .sc-d{font-size:10px; color:var(--ink-faint); margin-bottom:3px}
+  .sp-cell .sc-pip{
+    height:30px; border-radius:7px; background:var(--band); display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:var(--ink-faint);
+  }
+  .sp-cell .sc-pip.full{background:var(--vital); color:#fff}
+  .sp-cell .sc-pip.half{background:var(--warm-soft); color:var(--warm)}
+  .sp-cell .sc-pip.none{background:var(--band)}
+  .sp-cell .sc-pip.cheat{background:#FFF3CD; color:#B8860B}
+  /* 大数字 */
+  .sp-bignum-row{display:flex; gap:8px; margin-bottom:4px}
+  .sp-bignum{flex:1; text-align:center; background:var(--bg); border-radius:var(--radius-m); padding:12px 8px}
+  .sp-bignum .sbn-l{font-size:10.5px; color:var(--ink-faint); margin-bottom:3px}
+  .sp-bignum .sbn-v{font-size:21px; font-weight:700; color:var(--ink)}
+  .sp-bignum .sbn-v .u{font-size:11px; font-weight:500; color:var(--ink-soft); margin-left:1px}
+  /* 柱状图 */
+  .sp-chart{display:flex; align-items:flex-end; gap:6px; height:90px; padding:8px 4px 4px; background:var(--bg); border-radius:var(--radius-m)}
+  .sp-bar-wrap{flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end}
+  .sp-bar{width:100%; max-width:24px; background:var(--vital); border-radius:5px 5px 0 0; min-height:2px; transition:height .5s}
+  .sp-bar.empty{background:var(--band)}
+  .sp-bar-wrap .sbw-d{font-size:9px; color:var(--ink-faint); margin-top:4px}
+  /* 评语 */
+  .sp-feedback{font-size:13px; color:var(--ink); line-height:1.6; background:var(--vital-soft); padding:12px 14px; border-radius:var(--radius-m)}
+  .sp-feedback b{color:var(--ink)}
+  .sp-feedback .grade{display:inline-block; padding:2px 10px; border-radius:6px; font-size:12px; font-weight:700; margin-bottom:6px}
+  .sp-feedback .grade.s{background:var(--vital); color:#fff}
+  .sp-feedback .grade.a{background:#7BC97B; color:#fff}
+  .sp-feedback .grade.b{background:var(--cheat); color:#fff}
+  .sp-feedback .grade.c{background:var(--warm); color:#fff}
 </style>
 </head>
 <body>
@@ -332,6 +380,21 @@
   <div class="section">
     <div class="s-head"><div class="s-title">今日菜单</div><div class="s-sub">点击圆圈打卡</div></div>
     <div id="meals"></div>
+  </div>
+
+  <!-- 本周总结 -->
+  <div class="section">
+    <div class="s-head"><div class="s-title">本周总结</div><div class="s-sub">一键回看 7 天表现</div></div>
+    <button class="summary-toggle" id="sumToggle" onclick="toggleSummary()">
+      <span>📊 查看本周总结</span>
+      <span class="st-chev">▼</span>
+    </button>
+    <div class="summary-panel" id="summaryPanel">
+      <div class="sp-card" id="sc-stat"></div>
+      <div class="sp-card" id="sc-protein"></div>
+      <div class="sp-card" id="sc-weight"></div>
+      <div class="sp-card" id="sc-feedback"></div>
+    </div>
   </div>
 
   <!-- 食材替换计算器 -->
@@ -607,6 +670,132 @@ function addCustomToToday(){
   const customsLen = state.custom[state.selectedDay].length;
   state.done[state.selectedDay+"|3|"+(customsLen-1)] = true;
   saveState(); updateStats(false);
+}
+
+/* ============ 本周总结 ============ */
+function toggleSummary(){
+  const t = document.getElementById("sumToggle");
+  const p = document.getElementById("summaryPanel");
+  const isOpen = p.classList.contains("show");
+  if(isOpen){
+    p.classList.remove("show"); t.classList.remove("open");
+  } else {
+    renderSummary();
+    p.classList.add("show"); t.classList.add("open");
+  }
+}
+
+function getDayTotals(dayKey){
+  const meals = buildMeals(dayKey);
+  let protein=0, cal=0;
+  meals.forEach((m, mi)=>{
+    m.foods.forEach((f, fi)=>{
+      if(state.done[dayKey+"|"+mi+"|"+fi]){ protein += f.protein; cal += f.cal; }
+    });
+  });
+  return {protein, cal};
+}
+
+function renderSummary(){
+  // 逐天统计
+  const daysData = WEEK.map(w=>{
+    const t = getDayTotals(w.key);
+    return {key:w.key, name:w.name, type:w.type, label:w.label, protein:t.protein, cal:t.cal};
+  });
+
+  // 1. 达标网格
+  const statEl = document.getElementById("sc-stat");
+  let proteinDays = daysData.filter(d=>d.protein>=100).length;
+  let loggedDays = daysData.filter(d=>d.protein>0 || d.cal>0).length;
+  let gridHtml = '<div class="sp-title"><span class="sp-emoji">✅</span>本周蛋白达标</div>';
+  gridHtml += '<div class="sp-grid">';
+  daysData.forEach(d=>{
+    let pipClass="none", pipText="—";
+    if(d.type!=="std" && (d.protein>0||d.cal>0)){ pipClass="cheat"; pipText="放"; }
+    else if(d.protein>=100){ pipClass="full"; pipText="✓"; }
+    else if(d.protein>0){ pipClass="half"; pipText=Math.round(d.protein); }
+    gridHtml += '<div class="sp-cell"><div class="sc-d">'+d.name.replace("周","")+'</div><div class="sc-pip '+pipClass+'">'+pipText+'</div></div>';
+  });
+  gridHtml += '</div>';
+  statEl.innerHTML = gridHtml + '<div class="footer-note" style="margin-top:10px; text-align:left">'
+    + '7 天中 <b style="color:var(--vital)">'+proteinDays+'</b> 天蛋白达标,'
+    + '<b>'+loggedDays+'</b> 天有打卡记录。<br>'
+    + '<span style="opacity:.7">绿✓=达标,橙数字=未达标,黄放=放纵日</span></div>';
+
+  // 2. 蛋白柱状图
+  const proteinEl = document.getElementById("sc-protein");
+  const maxP = Math.max(100, ...daysData.map(d=>d.protein));
+  let chartHtml = '<div class="sp-title"><span class="sp-emoji">📈</span>每日蛋白量 (目标 100g)</div>';
+  chartHtml += '<div class="sp-chart">';
+  // 100g 目标参考线
+  daysData.forEach(d=>{
+    const h = Math.round((d.protein / maxP) * 100);
+    const reach = d.protein >= 100;
+    chartHtml += '<div class="sp-bar-wrap"><div class="sp-bar'+(reach?'':' empty')+'" style="height:'+Math.max(3,h)+'%"></div><div class="sbw-d">'+d.name.replace("周","")+'</div></div>';
+  });
+  chartHtml += '</div>';
+  const avgP = loggedDays>0 ? Math.round(daysData.reduce((s,d)=>s+d.protein,0)/7) : 0;
+  chartHtml += '<div class="sp-bignum-row" style="margin-top:11px"><div class="sp-bignum"><div class="sbn-l">日均蛋白</div><div class="sbn-v num">'+avgP+'<span class="u">g</span></div></div>'
+    + '<div class="sp-bignum"><div class="sbn-l">本周总蛋白</div><div class="sbn-v num">'+Math.round(daysData.reduce((s,d)=>s+d.protein,0))+'<span class="u">g</span></div></div></div>';
+  proteinEl.innerHTML = chartHtml;
+
+  // 3. 体重
+  const weightEl = document.getElementById("sc-weight");
+  const ws = state.weights || [];
+  let weightHtml = '<div class="sp-title"><span class="sp-emoji">⚖️</span>体重进展</div>';
+  if(ws.length===0){
+    weightHtml += '<div style="font-size:13px;color:var(--ink-faint);text-align:center;padding:10px">还没有体重记录<br>周一称一次,这里会自动算变化</div>';
+  } else {
+    const first = ws[0].val, last = ws[ws.length-1].val;
+    const delta = +(last - first).toFixed(1);
+    const goal = 131;
+    const toGoal = +(last - goal).toFixed(1);
+    let cls = delta<=0 ? "down" : "up";
+    weightHtml += '<div class="sp-bignum-row">'
+      + '<div class="sp-bignum"><div class="sbn-l">起始体重</div><div class="sbn-v num">'+first+'<span class="u">斤</span></div></div>'
+      + '<div class="sp-bignum"><div class="sbn-l">当前体重</div><div class="sbn-v num">'+last+'<span class="u">斤</span></div></div></div>';
+    weightHtml += '<div class="sp-bignum-row">'
+      + '<div class="sp-bignum"><div class="sbn-l">累计变化</div><div class="sbn-v num '+(delta<=0?'':'')+'" style="color:'+(delta<=0?'var(--vital)':'var(--warm)')+'">'+(delta<=0?'':'+')+delta+'<span class="u">斤</span></div></div>'
+      + '<div class="sp-bignum"><div class="sbn-l">距目标 131 斤</div><div class="sbn-v num" style="color:var(--ink)">'+(toGoal>0?'还差 '+toGoal:'已达标🎉')+'</div></div></div>';
+  }
+  weightEl.innerHTML = weightHtml;
+
+  // 4. 智能评语
+  const fbEl = document.getElementById("sc-feedback");
+  let grade="C", gradeText="继续努力", fbMsg="";
+  const completionRate = loggedDays/7;
+  if(proteinDays>=5 && completionRate>=0.7){ grade="S"; gradeText="完美一周"; }
+  else if(proteinDays>=4){ grade="A"; gradeText="表现优秀"; }
+  else if(proteinDays>=2){ grade="B"; gradeText="稳步推进"; }
+  else if(loggedDays===0){ grade="C"; gradeText="还没开始"; }
+
+  if(loggedDays===0){
+    fbMsg = '这周还没开始打卡呢。先从今天开始吧——打开"今日菜单",点亮第一个圆圈!💪';
+  } else {
+    // 找出最薄弱的一天
+    const weakest = daysData.filter(d=>d.protein<100 && d.protein>0).sort((a,b)=>a.protein-b.protein)[0];
+    fbMsg = '本周蛋白达标 <b>'+proteinDays+'/7</b> 天。';
+    if(proteinDays<5){
+      if(weakest){
+        fbMsg += '<b>'+weakest.name+'</b>只吃了 '+Math.round(weakest.protein)+'g(差 '+(100-Math.round(weakest.protein))+'g),';
+        fbMsg += '记得当晚那勺蛋白粉别省!';
+      } else {
+        fbMsg += '蛋白缺口主要来自"漏打卡"——可能你觉得没吃够。';
+      }
+    } else {
+      fbMsg += '蛋白保护做得很好,肌肉基本没流失。继续保持!';
+    }
+    // 体重提示
+    if(ws.length>=2){
+      const d = +(ws[ws.length-1].val - ws[0].val).toFixed(1);
+      if(d<0){ fbMsg += '<br>体重降了 <b>'+Math.abs(d)+'</b> 斤,节奏很稳。'; }
+      else if(d>0){ fbMsg += '<br>体重涨了 <b>'+d+'</b> 斤——可能是水/盐波动,先看两周趋势再判断。'; }
+      else { fbMsg += '<br>体重持平,下一周重点在"严守餐量"。'; }
+    }
+  }
+
+  fbEl.innerHTML = '<div class="sp-title"><span class="sp-emoji">💬</span>本周评语</div>'
+    + '<div class="sp-feedback"><span class="grade '+grade.toLowerCase()+'">'+grade+' · '+gradeText+'</span><br>'+fbMsg+'</div>';
 }
 
 const WEEK = [
