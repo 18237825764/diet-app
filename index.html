@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FAFAF8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="减脂日历">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon.svg">
+<title>减脂日历</title>
+<style>
+  :root{
+    /* —— 暖白 + 深墨蓝 + 单一活力色(柠绿) —— */
+    --bg:#FAFAF8;
+    --card:#FFFFFF;
+    --ink:#0E2A47;          /* 主文字 深墨蓝 */
+    --ink-soft:#5B6B7E;     /* 次文字 */
+    --ink-faint:#9AA6B4;    /* 弱文字 */
+    --line:#ECEDEE;         /* 极淡分隔 */
+    --band:#F3F4F2;
+    --vital:#3DDC97;        /* 单一活力色:柠绿 */
+    --vital-soft:#E8F8F0;
+    --warm:#FF8A5B;         /* 提示/警示(克制使用) */
+    --warm-soft:#FFF0E8;
+    --cheat:#F5A623;        /* 放纵日 暖橙 */
+    --radius-l:20px;
+    --radius-m:14px;
+    --radius-s:10px;
+    --shadow:0 1px 2px rgba(14,42,71,.04), 0 8px 24px rgba(14,42,71,.05);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0F1419; --card:#1A2028; --ink:#E8EEF5; --ink-soft:#9AA8B8;
+      --ink-faint:#6B7787; --line:#262E38; --band:#161C24;
+      --vital-soft:#16332A; --warm-soft:#33251A; --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink);
+    font-size:15px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+    padding-top:env(safe-area-inset-top);
+    letter-spacing:.1px;
+  }
+  /* 数字用更轻盈的现代体 */
+  .num{font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; letter-spacing:-.3px}
+
+  /* ===== 顶部英雄区 ===== */
+  .hero{
+    padding:20px 18px 0;
+  }
+  .hero-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px}
+  .hero-date{
+    font-size:13px; font-weight:600; color:var(--ink-faint);
+    letter-spacing:1px; text-transform:uppercase;
+  }
+  .hero-date .pill{
+    display:inline-block; padding:4px 10px; background:var(--band);
+    color:var(--ink-soft); border-radius:20px; margin-left:8px; font-size:11px;
+    text-transform:none; letter-spacing:0;
+  }
+  .hero-date .pill.cheat{background:var(--warm-soft); color:var(--cheat)}
+  .hero-plan{
+    font-size:12px; color:var(--vital); font-weight:600;
+    background:var(--vital-soft); padding:5px 11px; border-radius:20px;
+  }
+
+  /* 大圆环 + 数值 */
+  .ring-wrap{display:flex; align-items:center; gap:18px; margin-bottom:6px}
+  .ring{position:relative; width:96px; height:96px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .ring-bg{stroke:var(--band)}
+  .ring .ring-fg{stroke:var(--vital); stroke-linecap:round; transition:stroke-dashoffset .8s cubic-bezier(.22,1,.36,1)}
+  .ring .ring-center{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .ring .ring-num{font-size:28px; font-weight:700; color:var(--ink); line-height:1}
+  .ring .ring-unit{font-size:10px; color:var(--ink-faint); margin-top:1px}
+  .ring-info{flex:1}
+  .ring-info .ri-title{font-size:15px; color:var(--ink); font-weight:600; margin-bottom:3px}
+  .ring-info .ri-sub{font-size:12.5px; color:var(--ink-soft); line-height:1.5}
+  .ring-info .ri-sub b{color:var(--ink); font-weight:600}
+
+  /* 三个小指标条 */
+  .mini-stats{display:flex; gap:8px; margin-top:14px; margin-bottom:20px}
+  .mini-stat{
+    flex:1; background:var(--card); border-radius:var(--radius-m); padding:11px 12px;
+    box-shadow:var(--shadow);
+  }
+  .mini-stat .ms-label{font-size:10.5px; color:var(--ink-faint); margin-bottom:3px}
+  .mini-stat .ms-val{font-size:18px; font-weight:700; color:var(--ink)}
+  .mini-stat .ms-val .u{font-size:11px; font-weight:500; color:var(--ink-soft); margin-left:2px}
+
+  /* ===== 主体 ===== */
+  main{max-width:680px; margin:0 auto; padding:0 14px}
+  .section{margin-bottom:18px}
+  .s-head{display:flex; align-items:baseline; justify-content:space-between; margin:0 4px 10px}
+  .s-head .s-title{font-size:13px; font-weight:700; color:var(--ink); letter-spacing:.3px}
+  .s-head .s-sub{font-size:11px; color:var(--ink-faint)}
+
+  /* 日期选择: 胶囊横滑 */
+  .day-strip{display:flex; gap:7px; overflow-x:auto; padding:2px 4px 6px; -webkit-overflow-scrolling:touch}
+  .day-strip::-webkit-scrollbar{display:none}
+  .day-chip{
+    flex:0 0 auto; min-width:58px; padding:11px 8px; text-align:center;
+    background:var(--card); border-radius:var(--radius-m); cursor:pointer;
+    box-shadow:var(--shadow); transition:transform .2s;
+    border:1.5px solid transparent;
+  }
+  .day-chip:active{transform:scale(.95)}
+  .day-chip .dc-name{font-size:13px; font-weight:600; color:var(--ink)}
+  .day-chip .dc-tag{font-size:10px; color:var(--ink-faint); margin-top:3px}
+  .day-chip.active{background:var(--ink); border-color:var(--ink)}
+  .day-chip.active .dc-name{color:#fff}
+  .day-chip.active .dc-tag{color:rgba(255,255,255,.7)}
+  .day-chip.cheat .dc-tag{color:var(--cheat)}
+  .day-chip.active.cheat .dc-tag{color:#FFD08A}
+
+  /* 晚餐方案切换 */
+  .plan-cards{display:flex; gap:8px; margin-bottom:6px}
+  .plan-card{
+    flex:1; padding:13px 10px; border-radius:var(--radius-m); cursor:pointer;
+    background:var(--card); box-shadow:var(--shadow);
+    text-align:center; border:1.5px solid transparent; transition:all .2s;
+  }
+  .plan-card:active{transform:scale(.97)}
+  .plan-card .pc-letter{font-size:22px; font-weight:800; color:var(--ink-faint); line-height:1}
+  .plan-card .pc-name{font-size:11.5px; font-weight:600; color:var(--ink); margin-top:6px}
+  .plan-card .pc-desc{font-size:10px; color:var(--ink-faint); margin-top:3px; line-height:1.4}
+  .plan-card.active{background:var(--vital-soft); border-color:var(--vital)}
+  .plan-card.active .pc-letter{color:var(--vital)}
+  .plan-card.active .pc-name{color:var(--ink)}
+
+  /* ===== 餐卡 ===== */
+  .meal{
+    background:var(--card); border-radius:var(--radius-l); padding:16px;
+    margin-bottom:11px; box-shadow:var(--shadow);
+  }
+  .meal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:11px}
+  .meal-title{display:flex; align-items:center; gap:9px}
+  .meal-icon{
+    width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-size:15px; background:var(--band);
+  }
+  .meal-name{font-size:15px; font-weight:700; color:var(--ink)}
+  .meal-sub{font-size:11px; color:var(--ink-faint); margin-top:1px}
+  .meal-badge{
+    font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px;
+    background:var(--band); color:var(--ink-soft);
+  }
+  .meal-badge.all-done{background:var(--vital-soft); color:var(--vital)}
+
+  .food{
+    display:flex; align-items:center; gap:12px; padding:11px 0;
+    border-top:1px solid var(--line); cursor:pointer;
+  }
+  .food:first-of-type{border-top:none}
+  .check{
+    width:25px; height:25px; min-width:25px; border-radius:50%;
+    border:2px solid var(--line); background:transparent; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .25s cubic-bezier(.22,1,.36,1); color:transparent;
+  }
+  .food.done .check{background:var(--vital); border-color:var(--vital); color:#fff; transform:scale(1)}
+  .food.done .check{animation:pop .35s cubic-bezier(.22,1.4,.36,1)}
+  @keyframes pop{0%{transform:scale(.6)}50%{transform:scale(1.18)}100%{transform:scale(1)}}
+  .food.done .f-name{color:var(--ink-faint)}
+  .food.done .f-name .f-text{text-decoration:line-through; text-decoration-color:var(--ink-faint)}
+  .f-main{flex:1; min-width:0}
+  .f-text{font-size:14px; color:var(--ink); font-weight:500}
+  .f-detail{font-size:11.5px; color:var(--ink-faint); margin-top:1px}
+  .f-detail.pw{color:var(--vital); font-weight:600}
+  .f-mac{font-size:12px; font-weight:600; color:var(--ink-soft); text-align:right; white-space:nowrap}
+  .f-mac .f-p{color:var(--ink)}
+
+  /* ===== 体重记录 ===== */
+  .weight-card{background:var(--card); border-radius:var(--radius-l); padding:16px; box-shadow:var(--shadow)}
+  .weight-input-row{display:flex; gap:8px; margin-top:10px}
+  .weight-input{
+    flex:1; padding:13px 14px; border:1.5px solid var(--line); border-radius:var(--radius-m);
+    font-size:16px; background:var(--bg); color:var(--ink); font-weight:500;
+  }
+  .weight-input:focus{outline:none; border-color:var(--vital)}
+  .weight-save{
+    padding:13px 20px; background:var(--ink); color:#fff; border:none;
+    border-radius:var(--radius-m); font-size:14px; font-weight:600; cursor:pointer;
+  }
+  .weight-save:active{transform:scale(.96)}
+  .wl-item{
+    display:flex; justify-content:space-between; align-items:center; padding:11px 13px;
+    background:var(--bg); border-radius:var(--radius-m); margin-top:7px;
+  }
+  .wl-item .wl-date{font-size:13px; color:var(--ink-soft)}
+  .wl-item .wl-val{font-size:16px; font-weight:700; color:var(--ink)}
+  .wl-item .wl-delta{font-size:12.5px; font-weight:700; padding:3px 9px; border-radius:20px}
+  .wl-item .wl-delta.down{background:var(--vital-soft); color:var(--vital)}
+  .wl-item .wl-delta.up{background:var(--warm-soft); color:var(--warm)}
+
+  /* 提示卡 */
+  .principle{
+    background:linear-gradient(135deg, var(--vital-soft), var(--bg));
+    border-radius:var(--radius-l); padding:15px 16px; box-shadow:var(--shadow);
+  }
+  .principle .p-title{font-size:13px; font-weight:700; color:var(--ink); margin-bottom:8px}
+  .principle .p-item{font-size:12.5px; color:var(--ink-soft); line-height:1.7; padding-left:14px; position:relative}
+  .principle .p-item::before{content:"·"; position:absolute; left:4px; color:var(--vital); font-weight:900}
+
+  .footer-note{text-align:center; font-size:11px; color:var(--ink-faint); margin:18px 4px 0; line-height:1.6}
+
+  /* 底栏 */
+  .tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:50;
+    background:rgba(255,255,255,.86); backdrop-filter:saturate(180%) blur(20px); -webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-top:1px solid var(--line);
+    padding:9px 18px; padding-bottom:calc(9px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; justify-content:space-around; gap:10px;
+  }
+  @media (prefers-color-scheme:dark){ .tabbar{background:rgba(26,32,40,.86)} }
+  .tab-item{text-align:center; flex:1}
+  .tab-item .ti-label{font-size:10px; color:var(--ink-faint); margin-top:2px}
+  .tab-item .ti-val{font-size:14px; font-weight:700; color:var(--ink); line-height:1.1}
+  .tab-reset{
+    background:var(--band); border:none; color:var(--ink-soft);
+    padding:8px 13px; border-radius:var(--radius-s); font-size:11.5px; cursor:pointer; font-weight:600;
+  }
+  .tab-reset:active{transform:scale(.95)}
+
+  /* ===== 食材替换计算器 ===== */
+  .calc-card{background:var(--card); border-radius:var(--radius-l); padding:16px; box-shadow:var(--shadow)}
+  .calc-row{display:flex; gap:8px; margin-top:10px; align-items:stretch; position:relative}
+  .calc-input{
+    border:1.5px solid var(--line); border-radius:var(--radius-m);
+    background:var(--bg); color:var(--ink); font-size:14px; font-weight:500;
+  }
+  .calc-input.food-search{flex:1; padding:13px 14px}
+  .calc-input.food-gram{width:88px; padding:13px 10px; text-align:center}
+  .calc-input:focus{outline:none; border-color:var(--vital)}
+  .suggest-wrap{position:relative; flex:1}
+  .suggest-list{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:30;
+    background:var(--card); border-radius:var(--radius-m); box-shadow:0 8px 28px rgba(14,42,71,.14);
+    max-height:240px; overflow-y:auto; border:1px solid var(--line); display:none;
+  }
+  .suggest-list.show{display:block}
+  .suggest-item{padding:11px 14px; cursor:pointer; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center}
+  .suggest-item:last-child{border-bottom:none}
+  .suggest-item:active{background:var(--vital-soft)}
+  .suggest-item .si-name{font-size:14px; color:var(--ink); font-weight:500}
+  .suggest-item .si-cat{font-size:10px; color:var(--ink-faint); margin-top:1px}
+  .suggest-item .si-mac{font-size:11px; color:var(--vital); font-weight:600; text-align:right}
+
+  .calc-result{
+    background:var(--bg); border-radius:var(--radius-m); padding:14px; margin-top:12px; display:none;
+  }
+  .calc-result.show{display:block; animation:pop .3s}
+  .cr-line{font-size:13px; color:var(--ink-soft); margin-bottom:4px}
+  .cr-big{font-size:21px; font-weight:700; color:var(--ink); margin-bottom:10px}
+  .cr-big .b{color:var(--vital)}
+  .cr-big .w{color:var(--warm)}
+  .cr-divider{height:1px; background:var(--line); margin:10px 0}
+  .cr-judge{font-size:13px; line-height:1.7}
+  .cr-judge b{color:var(--ink)}
+  .tag{display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; margin-right:5px}
+  .tag.ok{background:var(--vital-soft); color:var(--vital)}
+  .tag.warn{background:var(--warm-soft); color:var(--warm)}
+  .calc-add{
+    margin-top:12px; width:100%; padding:13px; background:var(--ink); color:#fff; border:none;
+    border-radius:var(--radius-m); font-size:14px; font-weight:600; cursor:pointer; display:none;
+  }
+  .calc-add.show{display:block}
+  .calc-add:active{transform:scale(.98)}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部英雄区 ===== -->
+<header class="hero">
+  <div class="hero-top">
+    <div class="hero-date" id="hero-date"></div>
+    <div class="hero-plan" id="hero-plan">方案 B</div>
+  </div>
+  <div class="ring-wrap">
+    <div class="ring">
+      <svg width="96" height="96" viewBox="0 0 96 96">
+        <circle class="ring-bg" cx="48" cy="48" r="42" fill="none" stroke-width="7"/>
+        <circle class="ring-fg" id="ring-fg" cx="48" cy="48" r="42" fill="none" stroke-width="7"
+                stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-num num"><span id="ring-num">0</span></div>
+        <div class="ring-unit">/100g 蛋白</div>
+      </div>
+    </div>
+    <div class="ring-info">
+      <div class="ri-title" id="ri-title">今天还差 100g 蛋白</div>
+      <div class="ri-sub">已吃 <b class="num" id="ri-cal">0</b> kcal · 缺口 <b class="num" id="ri-deficit">~2000</b> kcal</div>
+    </div>
+  </div>
+  <div class="mini-stats">
+    <div class="mini-stat"><div class="ms-label">已吃蛋白</div><div class="ms-val num"><span id="ms-p">0</span><span class="u">g</span></div></div>
+    <div class="mini-stat"><div class="ms-label">已吃热量</div><div class="ms-val num"><span id="ms-c">0</span><span class="u">kcal</span></div></div>
+    <div class="mini-stat"><div class="ms-label">蛋白粉</div><div class="ms-val num"><span id="ms-scoop">1</span><span class="u">勺</span></div></div>
+  </div>
+</header>
+
+<main>
+  <!-- 日期选择 -->
+  <div class="section">
+    <div class="s-head"><div class="s-title">选择日期</div><div class="s-sub">点击切换</div></div>
+    <div class="day-strip" id="dayStrip"></div>
+  </div>
+
+  <!-- 晚餐方案 -->
+  <div class="section" id="planSection">
+    <div class="s-head"><div class="s-title">晚餐方案</div><div class="s-sub">每天可换</div></div>
+    <div class="plan-cards" id="planCards">
+      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">纯清淡</div><div class="pc-desc">只啃番茄/黄瓜<br>中午加鸡胸</div></div>
+      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">加粉推荐</div><div class="pc-desc">番茄/黄瓜<br>+ 蛋白粉1勺</div></div>
+      <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">加蛋</div><div class="pc-desc">番茄/黄瓜<br>+ 2个水煮蛋</div></div>
+    </div>
+  </div>
+
+  <!-- 餐卡 -->
+  <div class="section">
+    <div class="s-head"><div class="s-title">今日菜单</div><div class="s-sub">点击圆圈打卡</div></div>
+    <div id="meals"></div>
+  </div>
+
+  <!-- 食材替换计算器 -->
+  <div class="section">
+    <div class="s-head"><div class="s-title">换食材了?算一算</div><div class="s-sub">临时替换 / 检查达不达标</div></div>
+    <div class="calc-card">
+      <div class="calc-row">
+        <div class="suggest-wrap">
+          <input id="fc-food" class="calc-input food-search" placeholder="输入食材名,如:虾 / 猪肝 / 豆腐" autocomplete="off">
+          <div id="fc-suggest" class="suggest-list"></div>
+        </div>
+        <input id="fc-gram" type="number" class="calc-input food-gram num" placeholder="克数">
+      </div>
+      <div id="fc-result" class="calc-result"></div>
+      <button id="fc-add" class="calc-add" onclick="addCustomToToday()">加入今日(自定义项)</button>
+    </div>
+  </div>
+
+  <!-- 体重 -->
+  <div class="section">
+    <div class="s-head"><div class="s-title">体重记录</div><div class="s-sub">每周一称</div></div>
+    <div class="weight-card">
+      <div class="weight-input-row">
+        <input type="number" step="0.1" id="wInput" class="weight-input num" placeholder="输入体重(斤),如 149">
+        <button class="weight-save" onclick="saveWeight()">保存</button>
+      </div>
+      <div id="weightList" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- 原则 -->
+  <div class="principle">
+    <div class="p-title">三条底线</div>
+    <div class="p-item">热量别低于 1100 kcal</div>
+    <div class="p-item">全天蛋白 ≥100g(圆环满格才算)</div>
+    <div class="p-item">放纵日只限中午一顿,晚餐照常补蛋白</div>
+  </div>
+
+  <div class="footer-note">数据存你手机本机 · 离线可用 · 不上传服务器</div>
+</main>
+
+<!-- 底栏 -->
+<nav class="tabbar">
+  <div class="tab-item"><div class="ti-val" id="tb-day">周一</div><div class="ti-label">当前日期</div></div>
+  <div class="tab-item"><div class="ti-val" id="tb-plan">B</div><div class="ti-label当前方案">当前方案</div></div>
+  <div class="tab-item"><div class="ti-val">131</div><div class="ti-label">目标(斤)</div></div>
+  <button class="tab-reset" onclick="resetToday()">重置今天</button>
+</nav>
+
+<script>
+/* ============ 菜单数据(逻辑不变) ============ */
+const BASE = {
+  breakfast: [
+    {name:"牛奶 250ml", detail:"全脂", protein:16, cal:160},
+    {name:"蛋白粉 1 勺", detail:"乳清,混入牛奶搅匀", protein:24, cal:110, pw:true},
+    {name:"鸡蛋 2 个", detail:"水煮", protein:12, cal:150},
+  ],
+};
+
+function getLunch(type){
+  if(type==="cheat-noodle"){
+    return [
+      {name:"兰州拉面 1 碗", detail:"肉可加多,面吃完", protein:35, cal:750},
+      {name:"多喝 2L 水", detail:"排钠,第二天不水肿", protein:0, cal:0},
+    ];
+  }
+  if(type==="cheat-bbq"){
+    return [
+      {name:"羊肉串 10–12 串", detail:"蛋白主力", protein:40, cal:500},
+      {name:"鱼豆腐 3–4 块", detail:"解馋即可", protein:6, cal:200},
+      {name:"烤蔬菜 + 馒头片 1 片", detail:"韭菜/青椒/大蒜", protein:4, cal:180},
+      {name:"无糖茶 / 白水", detail:"最多 1 瓶啤酒", protein:0, cal:0},
+    ];
+  }
+  return [
+    {name:"鸡胸肉 150g", detail:"番茄炖/煎/烤,少油", protein:40, cal:190},
+    {name:"吐司 3 片", detail:"代替米饭", protein:9, cal:260},
+    {name:"桃子 / 香蕉 1 个", detail:"解馋", protein:1, cal:70},
+  ];
+}
+
+const DINNERS = {
+  A: {
+    label:"A 纯清淡 · 中午鸡胸+50g",
+    lunchExtra:[ {name:"鸡胸肉 +50g(补蛋白)", detail:"中午提前吃进去", protein:13, cal:60} ],
+    dinner:[ {name:"番茄 2–3 个 或 黄瓜 2 根", detail:"只啃,不开火", protein:2, cal:60} ],
+    pwScoopsToday:1,
+  },
+  B: {
+    label:"B 加粉 · 晚上加 1 勺",
+    lunchExtra:[],
+    dinner:[
+      {name:"番茄 / 黄瓜 2–3 个", detail:"只啃,不开火", protein:2, cal:60},
+      {name:"蛋白粉 1 勺(晚间)", detail:"凉水一摇 30 秒", protein:24, cal:110, pw:true},
+    ],
+    pwScoopsToday:2,
+  },
+  C: {
+    label:"C 加蛋 · 晚餐 2 个水煮蛋",
+    lunchExtra:[],
+    dinner:[
+      {name:"番茄 / 黄瓜 2–3 个", detail:"只啃,不开火", protein:2, cal:60},
+      {name:"水煮鸡蛋 2 个", detail:"免开火,剥壳即食", protein:12, cal:150},
+    ],
+    pwScoopsToday:1,
+  },
+};
+
+/* ============ 食材营养库 (每 100g) ============ */
+/* p = 蛋白 g, c = 热量 kcal */
+const FOOD_DB = [
+  // 主力蛋白
+  {name:"蛋白粉 (乳清)", p:78, c:400, cat:"蛋白"},
+  {name:"鸡胸肉", p:23, c:110, cat:"蛋白"},
+  {name:"瘦牛肉", p:21, c:125, cat:"蛋白"},
+  {name:"猪肝", p:20, c:129, cat:"蛋白"},
+  {name:"基围虾 / 青虾", p:24, c:90, cat:"蛋白"},
+  {name:"龙利鱼 / 巴沙鱼", p:18, c:90, cat:"蛋白"},
+  {name:"三文鱼", p:20, c:208, cat:"蛋白"},
+  {name:"金枪鱼罐头 (水浸)", p:24, c:116, cat:"蛋白"},
+  {name:"章鱼 / 八爪鱼", p:15, c:82, cat:"蛋白"},
+  {name:"鸡蛋 (全)", p:13, c:147, cat:"蛋白"},
+  {name:"蛋白 (纯)", p:11, c:48, cat:"蛋白"},
+  {name:"希腊酸奶", p:10, c:60, cat:"蛋白"},
+  {name:"北豆腐 (老豆腐)", p:15, c:116, cat:"蛋白"},
+  {name:"嫩豆腐", p:6, c:58, cat:"蛋白"},
+  {name:"牛奶 (全脂)", p:3, c:62, cat:"蛋白"},
+  {name:"脱脂牛奶", p:3.4, c:35, cat:"蛋白"},
+  {name:"毛豆", p:13, c:131, cat:"蛋白"},
+  // 碳水
+  {name:"米饭 (熟)", p:2.6, c:130, cat:"碳水"},
+  {name:"馒头", p:7, c:223, cat:"碳水"},
+  {name:"吐司面包", p:9, c:280, cat:"碳水"},
+  {name:"全麦面包", p:11, c:260, cat:"碳水"},
+  {name:"燕麦片", p:13, c:367, cat:"碳水"},
+  {name:"玉米", p:4, c:112, cat:"碳水"},
+  {name:"红薯", p:1.5, c:86, cat:"碳水"},
+  {name:"紫薯", p:1.4, c:82, cat:"碳水"},
+  {name:"土豆", p:2, c:81, cat:"碳水"},
+  {name:"兰州拉面", p:9, c:330, cat:"碳水"},  // 一碗约 600g
+  {name:"面条 (熟)", p:4, c:110, cat:"碳水"},
+  {name:"香蕉", p:1.4, c:93, cat:"碳水"},
+  {name:"苹果", p:0.3, c:54, cat:"碳水"},
+  {name:"桃子", p:0.9, c:48, cat:"碳水"},
+  // 蔬菜(低卡)
+  {name:"番茄", p:0.9, c:18, cat:"蔬菜"},
+  {name:"黄瓜", p:0.8, c:16, cat:"蔬菜"},
+  {name:"西兰花", p:3.5, c:36, cat:"蔬菜"},
+  {name:"菠菜", p:2.6, c:24, cat:"蔬菜"},
+  {name:"生菜", p:1.4, c:15, cat:"蔬菜"},
+  {name:"芹菜", p:1.2, c:14, cat:"蔬菜"},
+  {name:"白菜", p:1.5, c:17, cat:"蔬菜"},
+  {name:"卷心菜", p:1.5, c:24, cat:"蔬菜"},
+  {name:"冬瓜", p:0.4, c:12, cat:"蔬菜"},
+  {name:"青椒", p:1, c:22, cat:"蔬菜"},
+  // 高脂高卡(警示)
+  {name:"牛腩", p:18, c:332, cat:"高脂"},
+  {name:"五花肉", p:9, c:508, cat:"高脂"},
+  {name:"羊肉串 (1串)", p:3, c:70, cat:"高脂"},
+  {name:"鱼豆腐", p:8, c:200, cat:"高脂"},
+  {name:"油条", p:7, c:388, cat:"高脂"},
+  {name:"花生", p:25, c:574, cat:"高脂"},
+  {name:"薯片", p:7, c:547, cat:"高脂"},
+];
+
+/* 搜索食材 */
+const fcFood = document.getElementById("fc-food");
+const fcGram = document.getElementById("fc-gram");
+const fcSugg = document.getElementById("fc-suggest");
+const fcRes = document.getElementById("fc-result");
+const fcAddBtn = document.getElementById("fc-add");
+let fcSelected = null;  // 当前选中的食材
+
+fcFood.addEventListener("input", ()=>{
+  const q = fcFood.value.trim();
+  fcSelected = null;
+  fcRes.classList.remove("show"); fcAddBtn.classList.remove("show");
+  if(!q){ fcSugg.classList.remove("show"); fcSugg.innerHTML=""; return; }
+  const low = q.toLowerCase();
+  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,8);
+  if(hits.length===0){
+    fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-faint)">没找到,试试"虾/豆腐/米饭"</div>';
+  } else {
+    fcSugg.innerHTML = hits.map(f=>
+      '<div class="suggest-item" data-name="'+f.name+'">'
+      + '<div><div class="si-name">'+f.name+'</div><div class="si-cat">'+f.cat+'</div></div>'
+      + '<div class="si-mac num">'+f.p+'g蛋白<br>'+f.c+'k</div></div>'
+    ).join("");
+    fcSugg.querySelectorAll(".suggest-item").forEach(el=>{
+      el.onclick = ()=>{
+        fcSelected = FOOD_DB.find(f=>f.name===el.dataset.name);
+        fcFood.value = fcSelected.name; fcSugg.classList.remove("show");
+        fcGram.focus();
+      };
+    });
+  }
+  fcSugg.classList.add("show");
+});
+fcFood.addEventListener("blur", ()=>{ setTimeout(()=>fcSugg.classList.remove("show"), 150); });
+
+/* 计算结果 */
+fcGram.addEventListener("input", ()=>{ calcFood(); });
+
+function calcFood(){
+  if(!fcSelected || !fcGram.value){ fcRes.classList.remove("show"); fcAddBtn.classList.remove("show"); return; }
+  const g = parseFloat(fcGram.value);
+  if(!g || g<=0) return;
+  const p = +(fcSelected.p * g / 100).toFixed(1);
+  const c = Math.round(fcSelected.c * g / 100);
+  // 今天已吃的
+  const today = getTodayTotals();
+  const newP = today.protein + p;
+  const newC = today.cal + c;
+  // 判断
+  const proteinOK = newP >= 100;
+  const calOK = newC <= 1600;   // 减脂上限约 1600
+  const isWarnFood = fcSelected.cat === "高脂";
+  // 渲染
+  let judge = "";
+  judge += '<span class="tag '+(proteinOK?'ok':'warn')+'">蛋白 '+(proteinOK?'达标':'不足')+'</span>';
+  judge += '<span class="tag '+(calOK?'ok':'warn')+'">热量 '+(calOK?'可控':'偏高')+'</span>';
+  if(isWarnFood) judge += '<span class="tag warn">高脂·少量</span>';
+  let advice = "";
+  if(!proteinOK && calOK) advice = '👉 加上这份后蛋白 <b>'+newP+'g</b>,还差 <b>'+(100-newP).toFixed(0)+'g</b>。建议:再加 1 勺蛋白粉或 2 个蛋。';
+  else if(proteinOK && !calOK) advice = '⚠️ 加上这份后热量 <b>'+newC+'kcal</b>,超标 <b>'+(newC-1600)+'kcal</b>,缺口基本没了。建议:克数减半,或换成低卡项。';
+  else if(proteinOK && calOK) advice = '✅ 不错!加上后蛋白 <b>'+newP+'g</b>、热量 <b>'+newC+'kcal</b>,都在合理范围。';
+  else advice = '⚠️ 蛋白 <b>'+newP+'g</b> 不足 + 热量 <b>'+newC+'kcal</b> 偏高,两个都不理想。建议:换高蛋白低卡项(虾/蛋白/鸡胸)。';
+
+  fcRes.innerHTML =
+      '<div class="cr-line">这份 '+g+'g '+fcSelected.name+' 提供:</div>'
+    + '<div class="cr-big">蛋白 <span class="b num">'+p+'</span>g &nbsp;·&nbsp; 热量 <span class="'+(calOK?'b':'w')+' num">'+c+'</span> kcal</div>'
+    + '<div class="cr-divider"></div>'
+    + '<div class="cr-judge">'+judge+'</div>'
+    + '<div class="cr-judge" style="margin-top:8px; color:var(--ink)">'+advice+'</div>'
+    + '<div class="cr-line" style="margin-top:8px">(按今天已吃:'+today.protein+'g / '+today.cal+'kcal 估算)</div>';
+  fcRes.classList.add("show");
+  fcAddBtn.classList.add("show");
+}
+
+function getTodayTotals(){
+  const meals = buildMeals(state.selectedDay);
+  let protein=0, cal=0;
+  meals.forEach((m, mi)=>{
+    m.foods.forEach((f, fi)=>{
+      if(state.done[state.selectedDay+"|"+mi+"|"+fi]){ protein += f.protein; cal += f.cal; }
+    });
+  });
+  return {protein, cal};
+}
+
+/* 把自定义食材加入"今日",作为一个独立的虚拟餐卡 */
+function addCustomToToday(){
+  if(!fcSelected || !fcGram.value) return;
+  const g = parseFloat(fcGram.value);
+  const p = +(fcSelected.p * g / 100).toFixed(1);
+  const c = Math.round(fcSelected.c * g / 100);
+  if(!state.custom) state.custom = {};
+  if(!state.custom[state.selectedDay]) state.custom[state.selectedDay] = [];
+  if(state.custom[state.selectedDay].length >= 4){ alert("每天最多加 4 个自定义项,够多了~"); return; }
+  state.custom[state.selectedDay].push({
+    name: fcSelected.name + " " + g + "g",
+    detail: "自定义 · 点击可删除",
+    protein: p, cal: c, pw:false, custom:true
+  });
+  // 自定义项加入即视为"已吃",自动标记 done
+  // (custom 餐卡是 buildMeals 的第 4 张(mi=3),fi=最后一项)
+  saveState();
+  // 重置输入
+  fcFood.value=""; fcGram.value=""; fcSelected=null;
+  fcRes.classList.remove("show"); fcAddBtn.classList.remove("show");
+  render();
+  // 加入后自动勾选该项
+  const customsLen = state.custom[state.selectedDay].length;
+  state.done[state.selectedDay+"|3|"+(customsLen-1)] = true;
+  saveState(); updateStats(false);
+}
+
+const WEEK = [
+  {key:"mon", name:"周一", type:"std"},
+  {key:"tue", name:"周二", type:"std"},
+  {key:"wed", name:"周三", type:"cheat-noodle", label:"拉面日"},
+  {key:"thu", name:"周四", type:"std"},
+  {key:"fri", name:"周五", type:"std"},
+  {key:"sat", name:"周六", type:"std"},
+  {key:"sun", name:"周日", type:"cheat-bbq", label:"烧烤日"},
+];
+
+function typeTag(type){
+  if(type==="std") return "标准日";
+  if(type==="cheat-noodle") return "拉面日";
+  if(type==="cheat-bbq") return "烧烤日";
+  return "";
+}
+const MEAL_ICON = {breakfast:"🌅", lunch:"☀️", dinner:"🌙"};
+
+/* ============ 状态 ============ */
+const STORE_KEY = "diet_pwa_v2";
+let state = loadState();
+function loadState(){
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"B", weights:[] };
+}
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function getPlan(dayKey){ return state.dinnerPlan[dayKey] || state.defaultPlan; }
+
+function buildMeals(dayKey){
+  const wd = WEEK.find(w=>w.key===dayKey);
+  const plan = getPlan(dayKey);
+  const dinnerCfg = DINNERS[plan];
+  const meals = [];
+  meals.push({key:"breakfast", name:"早餐", sub:"启动蛋白合成", foods: BASE.breakfast.slice()});
+  let lunchFoods;
+  if(wd.type==="std"){ lunchFoods = getLunch("std").slice().concat(dinnerCfg.lunchExtra); }
+  else if(wd.type==="cheat-noodle"){ lunchFoods = getLunch("cheat-noodle"); }
+  else{ lunchFoods = getLunch("cheat-bbq"); }
+  meals.push({key:"lunch", name:"午餐", sub: typeTag(wd.type)||"主力", foods:lunchFoods});
+  let dinnerFoods;
+  if(wd.type==="std"){ dinnerFoods = dinnerCfg.dinner.slice(); }
+  else{
+    dinnerFoods = [
+      {name:"番茄 / 黄瓜 2–3 个", detail:"照常", protein:2, cal:60},
+      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:24, cal:110, pw:true},
+    ];
+  }
+  meals.push({key:"dinner", name:"晚餐", sub:"清淡 / 保肌", foods:dinnerFoods});
+  // 自定义食材(替换项)单独作为一张卡
+  const customs = (state.custom && state.custom[dayKey]) || [];
+  if(customs.length){
+    meals.push({key:"custom", name:"我加的", sub:"自定义替换项", foods: customs.map((f,i)=>({...f, customIdx:i})) });
+  }
+  return meals;
+}
+
+/* ============ 渲染 ============ */
+const RING_CIRC = 2 * Math.PI * 42; // ≈ 263.9
+
+function renderDayStrip(){
+  const c = document.getElementById("dayStrip"); c.innerHTML = "";
+  WEEK.forEach(w=>{
+    const isCheat = w.type!=="std";
+    const el = document.createElement("div");
+    el.className = "day-chip" + (state.selectedDay===w.key?" active":"") + (isCheat?" cheat":"");
+    el.innerHTML = '<div class="dc-name">'+w.name+'</div><div class="dc-tag">'+(w.label||"标准")+'</div>';
+    el.onclick = ()=>{ state.selectedDay = w.key; saveState(); render(); };
+    c.appendChild(el);
+  });
+}
+
+function renderPlanCards(){
+  const wd = WEEK.find(w=>w.key===state.selectedDay);
+  const show = wd.type==="std";
+  document.getElementById("planSection").style.display = show?"block":"none";
+  const cur = getPlan(state.selectedDay);
+  document.querySelectorAll(".plan-card").forEach(b=>{
+    b.classList.toggle("active", b.dataset.d===cur);
+    b.onclick = ()=>{ state.dinnerPlan[state.selectedDay] = b.dataset.d; saveState(); render(); };
+  });
+}
+
+function renderMeals(){
+  const meals = buildMeals(state.selectedDay);
+  const c = document.getElementById("meals"); c.innerHTML = "";
+  meals.forEach((m, mi)=>{
+    const doneCount = m.foods.filter((f,fi)=>state.done[state.selectedDay+"|"+mi+"|"+fi]).length;
+    const allDone = doneCount===m.foods.length && m.foods.length>0;
+    const card = document.createElement("div");
+    card.className = "meal";
+    let h = '<div class="meal-head">'
+      + '<div class="meal-title"><div class="meal-icon">'+(MEAL_ICON[m.key]||"•")+'</div>'
+      + '<div><div class="meal-name">'+m.name+'</div><div class="meal-sub">'+m.sub+'</div></div></div>'
+      + '<div class="meal-badge'+(allDone?' all-done':'')+'">'+doneCount+'/'+m.foods.length+'</div></div>';
+    m.foods.forEach((f, fi)=>{
+      const key = state.selectedDay+"|"+mi+"|"+fi;
+      const done = state.done[key];
+      const isCustom = m.key==="custom";
+      const delHint = isCustom ? ' · 点我删除' : '';
+      h += '<div class="food'+(done?' done':'')+'" data-key="'+key+'" data-custom="'+isCustom+'">'
+        +   '<div class="check">'+(isCustom?'✕':'✓')+'</div>'
+        +   '<div class="f-main"><div class="f-name"><span class="f-text">'+f.name+'</span></div>'
+        +     '<div class="f-detail'+(f.pw?' pw':'')+'">'+(f.detail||"")+delHint+'</div></div>'
+        +   '<div class="f-mac"><span class="f-p num">'+f.protein+'</span><span style="color:var(--ink-faint)">g</span>'
+        +     '<span style="color:var(--ink-faint); margin:0 4px">·</span>'+f.cal+'k</div>'
+        + '</div>';
+    });
+    card.innerHTML = h;
+    c.appendChild(card);
+  });
+  c.querySelectorAll(".food").forEach(el=>{
+    el.onclick = ()=>{
+      if(el.dataset.custom==="true"){
+        // 删除自定义项
+        if(!confirm("删除这个自定义食材?")) return;
+        const parts = el.dataset.key.split("|");
+        const ci = parseInt(parts[2]);
+        state.custom[state.selectedDay].splice(ci,1);
+        if(state.custom[state.selectedDay].length===0) delete state.custom[state.selectedDay];
+        // 打卡记录也要清理(因为索引会变)
+        Object.keys(state.done).forEach(k=>{ if(k.startsWith(state.selectedDay+"|")) delete state.done[k]; });
+        saveState(); render(); return;
+      }
+      const k = el.dataset.key;
+      state.done[k] = !state.done[k];
+      if(!state.done[k]) delete state.done[k];
+      saveState(); el.classList.toggle("done");
+      updateStats(false);
+    };
+  });
+}
+
+function updateStats(rerenderMeals){
+  const meals = buildMeals(state.selectedDay);
+  let eatenP=0, eatenC=0;
+  meals.forEach((m, mi)=>{
+    m.foods.forEach((f, fi)=>{
+      if(state.done[state.selectedDay+"|"+mi+"|"+fi]){ eatenP += f.protein; eatenC += f.cal; }
+    });
+  });
+  if(rerenderMeals) renderMeals();
+  // 圆环
+  const pct = Math.min(1, eatenP/100);
+  document.getElementById("ring-fg").style.strokeDashoffset = RING_CIRC*(1-pct);
+  document.getElementById("ring-num").textContent = eatenP;
+  // 英雄区文字
+  const remain = Math.max(0, 100 - eatenP);
+  document.getElementById("ri-title").textContent = remain>0 ? ("还差 "+remain+"g 蛋白达标") : "🎉 今日蛋白达标!";
+  document.getElementById("ri-cal").textContent = eatenC;
+  document.getElementById("ri-deficit").textContent = Math.max(0, 2000 - eatenC);
+  // 小指标
+  document.getElementById("ms-p").textContent = eatenP;
+  document.getElementById("ms-c").textContent = eatenC;
+  const wd = WEEK.find(w=>w.key===state.selectedDay);
+  const planCfg = DINNERS[getPlan(state.selectedDay)];
+  const scoops = (wd.type!=="std") ? 2 : planCfg.pwScoopsToday;
+  document.getElementById("ms-scoop").textContent = scoops;
+  // 头部副信息
+  document.getElementById("hero-date").innerHTML = wd.name + ' <span class="pill'+(wd.type!=="std"?' cheat':'')+'">'+(typeTag(wd.type))+'</span>';
+  document.getElementById("hero-plan").textContent = "方案 " + getPlan(state.selectedDay);
+  // 底栏
+  document.getElementById("tb-day").textContent = wd.name;
+  document.getElementById("tb-plan").textContent = wd.type==="std" ? getPlan(state.selectedDay) : "B";
+  // 修复底栏 label 类名笔误
+  document.querySelectorAll('.ti-label当前方案').forEach(e=>{e.className='ti-label'; e.textContent='当前方案';});
+}
+
+function render(){
+  renderDayStrip();
+  renderPlanCards();
+  renderMeals();
+  updateStats(false);
+  renderWeights();
+}
+
+/* 体重 */
+function saveWeight(){
+  const v = parseFloat(document.getElementById("wInput").value);
+  if(!v || v<50 || v>200){ alert("请输入合理体重,如 149"); return; }
+  const today = new Date(); const ds = (today.getMonth()+1)+"-"+today.getDate();
+  state.weights.push({date:ds, val:v});
+  document.getElementById("wInput").value = "";
+  saveState(); renderWeights();
+}
+function renderWeights(){
+  const c = document.getElementById("weightList"); c.innerHTML = "";
+  if(state.weights.length===0){
+    c.innerHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:12px;padding:8px">还没有记录,称完填进来</div>'; return;
+  }
+  const arr = state.weights.slice().reverse();
+  arr.forEach((w, i)=>{
+    const prev = state.weights[state.weights.length-1-i-1];
+    let deltaText=""; let cls="";
+    if(prev){ const d = w.val - prev.val;
+      if(d<0){ deltaText="↓ "+Math.abs(d).toFixed(1)+" 斤"; cls="down"; }
+      else if(d>0){ deltaText="↑ "+d.toFixed(1)+" 斤"; cls="up"; }
+      else{ deltaText="持平"; cls="down"; }
+    }
+    const el = document.createElement("div"); el.className="wl-item";
+    el.innerHTML = '<span class="wl-date">'+w.date+'</span><span class="wl-val num">'+w.val+'</span>'
+      + (deltaText?('<span class="wl-delta '+cls+'">'+deltaText+'</span>'):'');
+    c.appendChild(el);
+  });
+}
+
+function resetToday(){
+  if(!confirm("清空今天的全部打卡记录?")) return;
+  const dk = state.selectedDay;
+  Object.keys(state.done).forEach(k=>{ if(k.startsWith(dk+"|")) delete state.done[k]; });
+  saveState(); render();
+}
+
+/* 老数据迁移 */
+try{
+  const old = localStorage.getItem("diet_pwa_v1");
+  if(old && !localStorage.getItem("diet_pwa_v2+")){
+    const oj = JSON.parse(old);
+    state.done = Object.assign({}, oj.done||{}); state.weights = oj.weights||[]; state.dinnerPlan = oj.dinnerPlan||{};
+    localStorage.setItem("diet_pwa_v2+", "1"); saveState();
+  }
+}catch(e){}
+
+/* PWA */
+if("serviceWorker" in navigator){ window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+
+render();
+</script>
+</body>
+</html>
