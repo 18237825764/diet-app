@@ -89,6 +89,34 @@
   .ring-info .ri-sub{font-size:12.5px; color:var(--ink-soft); line-height:1.5}
   .ring-info .ri-sub b{color:var(--ink); font-weight:600}
 
+  /* ===== 热量线性进度条(双线监控) ===== */
+  .cal-bar-wrap{margin-top:14px}
+  .cal-bar-head{display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:5px}
+  .cal-bar-head .cbh-l{color:var(--ink-soft); font-weight:600}
+  .cal-bar-head .cbh-v{color:var(--ink); font-weight:700}
+  .cal-bar-head .cbh-v.warn{color:var(--warm)}
+  .cal-bar-head .cbh-v.ok{color:var(--vital)}
+  .cal-bar-track{
+    position:relative; height:10px; background:var(--band); border-radius:6px; overflow:hidden;
+  }
+  /* 安全下限标记线 (1100 / 1500 比例处) */
+  .cal-bar-minline{
+    position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--warm);
+    left:73.3%; z-index:2;  /* 1100/1500 */
+  }
+  .cal-bar-fill{
+    height:100%; background:var(--warm); border-radius:6px; transition:width .5s, background .3s;
+  }
+  .cal-bar-fill.ok{background:var(--vital)}
+  .cal-bar-fill.danger{background:var(--warm); animation:calpulse 1s infinite}
+  @keyframes calpulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .cal-bar-legend{display:flex; justify-content:space-between; font-size:9.5px; color:var(--ink-faint); margin-top:4px}
+  .cal-warn-box{
+    display:none; background:var(--warm-soft); color:var(--warm); font-size:12px; font-weight:600;
+    padding:8px 11px; border-radius:8px; margin-top:9px; line-height:1.45;
+  }
+  .cal-warn-box.show{display:block; animation:pop .3s}
+
   /* 三个小指标条 */
   .mini-stats{display:flex; gap:8px; margin-top:14px; margin-bottom:20px}
   .mini-stat{
@@ -471,6 +499,19 @@
       <div class="ri-sub">已吃 <b class="num" id="ri-cal">0</b> kcal · 缺口 <b class="num" id="ri-deficit">~2000</b> kcal</div>
     </div>
   </div>
+  <!-- 热量进度条(双线监控) -->
+  <div class="cal-bar-wrap">
+    <div class="cal-bar-head">
+      <span class="cbh-l">🔥 热量监控 <span id="cbh-state" style="color:var(--ink-faint); font-size:10px">目标 1100~1500</span></span>
+      <span class="cbh-v num"><span id="cbh-val">0</span> / 1500 kcal</span>
+    </div>
+    <div class="cal-bar-track">
+      <div class="cal-bar-minline" title="最低红线 1100"></div>
+      <div class="cal-bar-fill" id="cal-fill" style="width:0%"></div>
+    </div>
+    <div class="cal-bar-legend"><span>0</span><span style="color:var(--warm)">↓ 1100 红线</span><span>1500</span></div>
+    <div class="cal-warn-box" id="cal-warn"></div>
+  </div>
   <div class="mini-stats">
     <div class="mini-stat"><div class="ms-label">已吃蛋白</div><div class="ms-val num"><span id="ms-p">0</span><span class="u">g</span></div></div>
     <div class="mini-stat"><div class="ms-label">已吃热量</div><div class="ms-val num"><span id="ms-c">0</span><span class="u">kcal</span></div></div>
@@ -720,6 +761,19 @@ const FOOD_DB = [
   {name:"油条", p:7, c:388, cat:"高脂"},
   {name:"花生", p:25, c:574, cat:"高脂"},
   {name:"薯片", p:7, c:547, cat:"高脂"},
+  // 家常炒菜 (按一盘常用份量约 250g 估算, 少油)
+  {name:"番茄炒蛋(一盘)", p:18, c:230, cat:"家常菜"},
+  {name:"醋溜土豆丝(一盘)", p:6, c:240, cat:"家常菜"},
+  {name:"番茄西葫芦(一盘)", p:4, c:90, cat:"家常菜"},
+  {name:"青椒土豆丝(一盘)", p:5, c:220, cat:"家常菜"},
+  {name:"番茄炖鸡胸(一盘)", p:42, c:260, cat:"家常菜"},
+  {name:"蒜蓉西兰花(一盘)", p:9, c:95, cat:"家常菜"},
+  {name:"凉拌黄瓜(一盘)", p:2, c:35, cat:"家常菜"},
+  {name:"番茄炒猪肝(一盘)", p:30, c:210, cat:"家常菜"},
+  {name:"青椒炒蛋(一盘)", p:14, c:200, cat:"家常菜"},
+  {name:"醋熘白菜(一盘)", p:4, c:60, cat:"家常菜"},
+  {name:"蒜蓉菠菜(一盘)", p:7, c:65, cat:"家常菜"},
+  {name:"番茄豆腐汤(一碗)", p:12, c:120, cat:"家常菜"},
 ];
 
 /* 搜索食材 */
@@ -1062,6 +1116,13 @@ const QUICK_FOODS = [
   {name:"番茄 1 个", detail:"约150g", protein:1.4, cal:27, pw:false},
   {name:"黄瓜 1 根", detail:"约200g", protein:1.6, cal:32, pw:false},
   {name:"桃子 1 个", detail:"约", protein:1, cal:48, pw:false},
+  {name:"番茄炒蛋(盘)", detail:"少油·家常", protein:18, cal:230, pw:false},
+  {name:"土豆丝(盘)", detail:"醋溜·家常", protein:6, cal:240, pw:false},
+  {name:"番茄西葫芦(盘)", detail:"少油·家常", protein:4, cal:90, pw:false},
+  {name:"番茄炖鸡胸(盘)", detail:"高蛋白家常", protein:42, cal:260, pw:false},
+  {name:"蒜蓉西兰花(盘)", detail:"家常", protein:9, cal:95, pw:false},
+  {name:"凉拌黄瓜(盘)", detail:"家常", protein:2, cal:35, pw:false},
+  {name:"番茄炒猪肝(盘)", detail:"补铁家常", protein:30, cal:210, pw:false},
 ];
 function renderQuickBar(){
   const c = document.getElementById("quickBar");
@@ -1478,6 +1539,41 @@ function updateStats(rerenderMeals){
   // 小指标
   document.getElementById("ms-p").textContent = eatenP;
   document.getElementById("ms-c").textContent = eatenC;
+  // 热量进度条 (双线监控)
+  const CAL_MAX = 1500, CAL_MIN = 1100;
+  const calPct = Math.min(100, Math.round(eatenC / CAL_MAX * 100));
+  const calFill = document.getElementById("cal-fill");
+  const cbhVal = document.getElementById("cbh-val");
+  const cbhState = document.getElementById("cbh-state");
+  const calWarn = document.getElementById("cal-warn");
+  calFill.style.width = calPct + "%";
+  cbhVal.textContent = eatenC;
+  calFill.classList.remove("ok", "danger");
+  calWarn.classList.remove("show");
+  if(eatenC === 0){
+    // 还没开始吃, 不警告
+    calFill.style.background = "var(--band)";
+    cbhState.textContent = "· 目标 1100~1500";
+    cbhVal.className = "num";
+  } else if(eatenC < CAL_MIN){
+    // 热量过低 - 闪警
+    calFill.classList.add("danger");
+    cbhState.textContent = "· ⚠️ 热量过低!";
+    cbhVal.className = "num warn";
+    cbhVal.parentElement.className = "cbh-v warn";
+    calWarn.innerHTML = "⚠️ 今天热量才 <b>"+eatenC+"</b> kcal,低于红线 1100。<br>热量不够会让蛋白被当燃料烧、肌肉照样掉、代谢下降。建议<b>加 1 片吐司/半个馒头</b>。";
+    calWarn.classList.add("show");
+  } else if(eatenC <= CAL_MAX){
+    calFill.classList.add("ok");
+    cbhState.textContent = "· ✅ 安全区";
+    cbhVal.className = "num ok";
+    cbhVal.parentElement.className = "cbh-v ok";
+  } else {
+    calFill.style.background = "var(--warm)";
+    cbhState.textContent = "· ⚠️ 热量偏高";
+    cbhVal.className = "num warn";
+    cbhVal.parentElement.className = "cbh-v warn";
+  }
   const wd = WEEK.find(w=>w.key===state.selectedDay);
   // 勺数: 实时统计全部菜单里 pw:true 的食物项个数 (不再硬编码预设)
   const allMeals = buildMeals(state.selectedDay);
