@@ -1,14 +1,10 @@
-[
-  {
-    "relation": [
-      "delegate_permission/common.handle_all_urls"
-    ],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "asia.sunweiyong.diet.twa",
-      "sha256_cert_fingerprints": [
-        "af:c2:61:8d:8b:93:34:7b:03:46:84:ab:77:66:b8:59:1f:14:7c:da:73:a5:9d:43:b1:44:07:7f:21:ce:72:55"
-      ]
-    }
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "asia.sunweiyong.diet.twa",
+    "sha256_cert_fingerprints": [
+      "AF:C2:61:8D:8B:93:34:7B:03:46:84:AB:77:66:B8:59:1F:14:7C:DA:73:A5:9D:43:B1:44:07:7F:21:CE:72:55"
+    ]
   }
-]
+}]
