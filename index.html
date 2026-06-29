@@ -904,6 +904,11 @@ const FOOD_DB = [
 ];
 
 /* ============ 统一的食物输入体验 ============ */
+/* 智能数字格式化: 整数显示整数, 带小数最多1位 */
+function fmt(n){
+  n = Math.round(n*10)/10;
+  return (n % 1 === 0) ? n.toString() : n.toFixed(1);
+}
 const fcFood = document.getElementById("fc-food");
 const aiFood = document.getElementById("ai-food");
 const aiBtn = document.getElementById("ai-btn");
@@ -980,8 +985,8 @@ async function aiLookup(foodName){
     const note = (parts[2] || (parts.length>1?parts[parts.length-1]:"")) || "AI 估算";
     openPortionModal({
       name: data.food.name, cat: cat, note: "AI 估算 · " + note,
-      baseP: data.food.protein, baseC: data.food.cal,
-      source: "ai", target:"today"
+      baseP: data.food.per100_protein || 0, baseC: data.food.per100_cal || 0,
+      source: "ai", target:"today", aiGram: data.food.gram || 350
     });
   }catch(e){
     fcStatus.style.display = "none";
@@ -1002,20 +1007,14 @@ let pmBaseP = 0, pmBaseC = 0;
 
 function openPortionModal(food){
   pendingFood = food;
-  // 把 baseP/baseC 归一化为 per100g (本地库本来就是 per100g; AI 项的"标准份"按 350g 折算)
-  if(food.source === "ai"){
-    // AI 返回的是"标准份"总量, 假设标准份≈350g, 反推 per100g
-    pmBaseP = +(food.baseP / 3.5).toFixed(2);
-    pmBaseC = Math.round(food.baseC / 3.5);
-    pmGram = 350;
-  } else {
-    pmBaseP = food.baseP;
-    pmBaseC = food.baseC;
-    pmGram = 150;
-  }
+  // baseP/baseC 现在已经是 per100g (Worker 返回的 per100_protein / per100_cal; 本地库也本来就是 per100g)
+  pmBaseP = food.baseP || 0;
+  pmBaseC = food.baseC || 0;
+  // AI 项的起始克数 = AI 估算的"标准份实际克数", 本地库默认 150g
+  pmGram = (food.source === "ai") ? (food.aiGram || 350) : 150;
 
   document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(food.source==='ai'?'var(--ink)':'var(--vital)')+'">'+(food.source==='ai'?'AI':'本地')+'</span>'+food.name;
-  document.getElementById("pm-sub").textContent = food.cat + " · 每100g = "+pmBaseP+"g蛋白 / "+pmBaseC+"kcal";
+  document.getElementById("pm-sub").textContent = food.cat + " · 每100g = "+fmt(pmBaseP)+"g蛋白 / "+pmBaseC+"kcal";
 
   renderPortionContent(food);
   document.getElementById("portionModal").classList.add("show");
@@ -1025,11 +1024,13 @@ function renderPortionContent(food){
   // 4 档快选(克数)
   let presets;
   if(food.source === "ai"){
+    // AI 项: 基于 AI 返回的真实"标准份"克数, 给出 小份/标准/大份/超大
+    const g0 = food.aiGram || 350;
     presets = [
-      {g:200, label:"小份", rec:false},
-      {g:350, label:"标准份", rec:true},
-      {g:500, label:"大份", rec:false},
-      {g:650, label:"超大份", rec:false},
+      {g: Math.round(g0*0.6), label:"小份", rec:false},
+      {g: g0, label:"标准份", rec:true},
+      {g: Math.round(g0*1.3), label:"大份", rec:false},
+      {g: Math.round(g0*1.6), label:"超大份", rec:false},
     ];
   } else {
     presets = [
@@ -1053,11 +1054,11 @@ function renderPortionContent(food){
   list.innerHTML =
     '<div class="calc-row" style="display:block">'
     + presets.map(p=>{
-      const pp = +(pmBaseP * p.g / 100).toFixed(1);
+      const pp = pmBaseP * p.g / 100;
       const cc = Math.round(pmBaseC * p.g / 100);
       return '<div class="portion-card'+(p.rec?' recommended':'')+'" onclick="setGram('+p.g+', this)" data-g="'+p.g+'">'
         + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+'<span style="color:var(--ink-faint);font-size:11px;font-weight:500;margin-left:5px">'+p.g+'g</span></div>'
-        + '<div class="pc-hint">约 '+pp+'g 蛋白</div></div>'
+        + '<div class="pc-hint">约 '+fmt(pp)+'g 蛋白</div></div>'
         + '<div class="pc-right"><div class="pc-mac num">'+cc+' kcal</div></div>'
         + '</div>';
     }).join("")
@@ -1107,7 +1108,7 @@ function setGram(g, el){
 }
 
 function updatePmLive(){
-  const p = +(pmBaseP * pmGram / 100).toFixed(1);
+  const p = pmBaseP * pmGram / 100;
   const c = Math.round(pmBaseC * pmGram / 100);
   const today = getTodayTotals();
   const newP = today.protein + p;
@@ -1115,9 +1116,9 @@ function updatePmLive(){
   const proteinOK = newP >= 100;
   const calOK = newC <= 1600;
   document.getElementById("pmLive").innerHTML =
-    '<div class="gl-item pro"><div class="gl-l">这次蛋白</div><div class="gl-v num">'+p+'g</div></div>'
+    '<div class="gl-item pro"><div class="gl-l">这次蛋白</div><div class="gl-v num">'+fmt(p)+'g</div></div>'
     + '<div class="gl-item cal"><div class="gl-l">这次热量</div><div class="gl-v num">'+c+'k</div></div>'
-    + '<div class="gl-item"><div class="gl-l">加完蛋白 '+ (proteinOK?'✅':'⚠') +'</div><div class="gl-v num" style="color:'+(proteinOK?'var(--vital)':'var(--accent)')+'">'+newP+'g</div></div>'
+    + '<div class="gl-item"><div class="gl-l">加完蛋白 '+ (proteinOK?'✅':'⚠') +'</div><div class="gl-v num" style="color:'+(proteinOK?'var(--vital)':'var(--accent)')+'">'+fmt(newP)+'g</div></div>'
     + '<div class="gl-item"><div class="gl-l">加完热量 '+ (calOK?'✅':'⚠') +'</div><div class="gl-v num" style="color:'+(calOK?'var(--vital)':'var(--accent)')+'">'+newC+'k</div></div>';
 }
 
@@ -1206,7 +1207,7 @@ function renderEditList(){
   c.innerHTML = editingFoods.map((f,i)=>{
     return '<div class="ef-row">'
       + '<div class="ef-name">'+f.name+'<span class="ef-gram">'+(f.detail||"")+'</span></div>'
-      + '<div class="ef-mac"><span class="ef-p num">'+f.protein+'</span>g · '+f.cal+'k</div>'
+      + '<div class="ef-mac"><span class="ef-p num">'+fmt(f.protein)+'</span>g · '+f.cal+'k</div>'
       + '<button class="ef-del" onclick="removeEditFood('+i+')">✕</button>'
       + '</div>';
   }).join("");
@@ -1288,8 +1289,8 @@ async function emAddAI(){
     const cat = parts[0] || "其他";
     pendingFood = {
       name: data.food.name, cat: cat, note: "AI 估算",
-      baseP: +(data.food.protein/3.5).toFixed(2),  // 标准份≈350g 反推 per100g
-      baseC: Math.round(data.food.cal/3.5),
+      baseP: data.food.per100_protein || 0,
+      baseC: data.food.per100_cal || 0,
       source:"ai", target:"edit",
     };
     emInput.value=""; emSugg.classList.remove("show");
@@ -1782,7 +1783,7 @@ function renderMeals(){
         +   '<div class="check">'+(isCustom?'✕':'✓')+'</div>'
         +   '<div class="f-main"><div class="f-name"><span class="f-text">'+f.name+'</span></div>'
         +     '<div class="f-detail'+(f.pw?' pw':'')+'">'+(f.detail||"")+delHint+'</div></div>'
-        +   '<div class="f-mac"><span class="f-p num">'+f.protein+'</span><span style="color:var(--ink-faint)">g</span>'
+        +   '<div class="f-mac"><span class="f-p num">'+fmt(f.protein)+'</span><span style="color:var(--ink-faint)">g</span>'
         +     '<span style="color:var(--ink-faint); margin:0 4px">·</span>'+f.cal+'k</div>'
         + '</div>';
     });
