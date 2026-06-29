@@ -758,11 +758,14 @@
   </div>
 
   <!-- 原则 -->
-  <div class="principle">
-    <div class="p-title">三条底线</div>
-    <div class="p-item">热量别低于 1100 kcal</div>
-    <div class="p-item">全天蛋白 ≥100g(圆环满格才算)</div>
-    <div class="p-item">放纵日只限中午一顿,晚餐照常补蛋白</div>
+  <div class="principle" id="aiSummaryCard">
+    <div class="p-title" style="display:flex; align-items:center; justify-content:space-between">
+      <span>🤖 AI 今日饮食小结</span>
+      <button id="aiSummaryBtn" class="setting-btn primary" style="padding:7px 12px" onclick="genAiSummary()">生成小结</button>
+    </div>
+    <div id="aiSummaryContent" style="font-size:12.5px; color:var(--ink-soft); line-height:1.7; padding-top:8px">
+      点右上「生成小结」,AI 会根据你今天实际吃的东西给你一段个性化建议(蛋白够不够、热量缺口、明天怎么调整)。
+    </div>
   </div>
 
   <div class="footer-note">数据存你手机本机 · 离线可用 · 不上传服务器</div>
@@ -964,7 +967,51 @@ aiFood.addEventListener("keydown", (e)=>{
   if(e.key==="Enter"){ e.preventDefault(); btnAiLookup(); }
 });
 
-/* 设置 AI loading 态 (主按钮 + 编辑器按钮 + 状态文字) */
+/* ============ AI 今日饮食小结 ============ */
+async function genAiSummary(){
+  const btn = document.getElementById("aiSummaryBtn");
+  const content = document.getElementById("aiSummaryContent");
+  if(btn.disabled) return;
+  // 收集今天吃了什么 + 营养
+  const meals = buildMeals(state.selectedDay);
+  const eatenItems = [];
+  meals.forEach((m, mi)=>{
+    const isCustom = (m.key==="custom");
+    m.foods.forEach((f, fi)=>{
+      const dk = isCustom ? (state.selectedDay+"|custom|"+fi) : (state.selectedDay+"|"+mi+"|"+fi);
+      if(state.done[dk]){ eatenItems.push(f); }
+    });
+  });
+  const totals = getTodayTotals();
+  if(eatenItems.length === 0){
+    content.innerHTML = '今天还没有打卡记录,先去吃了点什么再回来生成小结吧 🙂';
+    return;
+  }
+  // loading
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.innerHTML = '<span class="spinner-mini" style="display:inline-block; width:12px; height:12px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite"></span> 思考中';
+  content.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid var(--band);border-top-color:var(--vital);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px"></span>GLM-5.2 正在看你今天的饮食...';
+  try{
+    const resp = await fetch("https://ai.sunweiyong.asia/summary", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        items: eatenItems.map(f=>({name:f.name, protein:f.protein, cal:f.cal})),
+        protein: totals.protein, cal: totals.cal,
+      }),
+    });
+    const data = await resp.json();
+    if(data.ok){
+      content.innerHTML = '<div style="background:var(--vital-soft); padding:12px 14px; border-radius:10px; color:var(--ink); line-height:1.7; white-space:pre-wrap">'+data.summary+'</div>';
+    } else {
+      content.innerHTML = '⚠️ 总结失败: '+data.error;
+    }
+  }catch(e){
+    content.innerHTML = '⚠️ 网络错误: '+e.message;
+  }
+  btn.disabled = false;
+  btn.textContent = '重新生成';
+}
 function setAiLoading(busy, foodName){
   const mainBtn = document.getElementById("ai-btn");
   const editBtn = document.querySelector(".efb-ai");
