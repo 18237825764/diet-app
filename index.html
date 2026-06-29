@@ -1904,31 +1904,14 @@ try{
   }
 }catch(e){}
 
-/* PWA */
+/* PWA: 完全去掉 Service Worker (它是缓存坑的根因, 每次都是最新版最重要) */
+// 先注销旧 SW
 if("serviceWorker" in navigator){
-  window.addEventListener("load", ()=>{
-    navigator.serviceWorker.register("sw.js").then(reg=>{
-      // 检测到新版 SW, 立即激活
-      reg.addEventListener("updatefound", ()=>{
-        const nw = reg.installing;
-        if(nw){
-          nw.addEventListener("statechange", ()=>{
-            if(nw.state==="installed" && navigator.serviceWorker.controller){
-              // 有新版本, 提示用户刷新
-              if(confirm("App 有新版本,立即可用!\n点确定刷新加载新版本。")){
-                location.reload();
-              }
-            }
-          });
-        }
-      });
-    }).catch(()=>{});
-    // 每小时检查一次更新
-    setInterval(()=>{
-      navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update(); }).catch(()=>{});
-    }, 3600000);
-  });
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>{ r.unregister(); console.log("已注销旧 SW"); });
+  }).catch(()=>{});
 }
+
 
 /* 启动: 自动定位今天 */
 state.selectedDay = autoSelectToday();
