@@ -1,5 +1,5 @@
 // Service Worker - 离线缓存
-const CACHE = "dietapp-v10";
+const CACHE = "dietapp-v11";
 const ASSETS = [
   "./",
   "./index.html",
