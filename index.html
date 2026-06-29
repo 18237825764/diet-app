@@ -985,7 +985,7 @@ async function aiLookup(foodName){
     const note = (parts[2] || (parts.length>1?parts[parts.length-1]:"")) || "AI 估算";
     openPortionModal({
       name: data.food.name, cat: cat, note: "AI 估算 · " + note,
-      baseP: data.food.per100_protein || 0, baseC: data.food.per100_cal || 0,
+      baseP: data.food.protein, baseC: data.food.cal,   // AI 项: 直接用总量, 不再当 per100
       source: "ai", target:"today", aiGram: data.food.gram || 350
     });
   }catch(e){
@@ -1001,30 +1001,49 @@ function closePortionModal(){
   document.getElementById("portionModal").classList.remove("show");
 }
 
-// 当前弹层里"实时"的克数和基准(per100g)
+// 当前弹层状态
 let pmGram = 150;
 let pmBaseP = 0, pmBaseC = 0;
+let pmSource = "local";   // "ai" 用总量比例, "local" 用 per100g
+let pmStdGram = 100;      // 本地项=100g; AI 项=aiGram (标准份总克数)
 
 function openPortionModal(food){
   pendingFood = food;
-  // baseP/baseC 现在已经是 per100g (Worker 返回的 per100_protein / per100_cal; 本地库也本来就是 per100g)
-  pmBaseP = food.baseP || 0;
-  pmBaseC = food.baseC || 0;
-  // AI 项的起始克数 = AI 估算的"标准份实际克数", 本地库默认 150g
-  pmGram = (food.source === "ai") ? (food.aiGram || 350) : 150;
+  pmSource = food.source || "local";
+  pmBaseP = food.baseP || 0;   // 本地=per100蛋白; AI=标准份总蛋白
+  pmBaseC = food.baseC || 0;   // 本地=per100热量; AI=标准份总热量
+  pmStdGram = (pmSource === "ai") ? (food.aiGram || 350) : 100;
+  pmGram = (pmSource === "ai") ? (food.aiGram || 350) : 150;
 
-  document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(food.source==='ai'?'var(--ink)':'var(--vital)')+'">'+(food.source==='ai'?'AI':'本地')+'</span>'+food.name;
-  document.getElementById("pm-sub").textContent = food.cat + " · 每100g = "+fmt(pmBaseP)+"g蛋白 / "+pmBaseC+"kcal";
-
+  document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(pmSource==='ai'?'var(--ink)':'var(--vital)')+'">'+(pmSource==='ai'?'AI':'本地')+'</span>'+food.name;
+  // 副标题: AI 显示"标准份=XXX", 本地显示"每100g=XXX"
+  let subText;
+  if(pmSource === "ai"){
+    subText = food.cat + " · 标准份("+pmStdGram+"g) ≈ "+pmBaseP+"g蛋白 / "+pmBaseC+"kcal";
+  } else {
+    subText = food.cat + " · 每100g = "+fmt(pmBaseP)+"g蛋白 / "+pmBaseC+"kcal";
+  }
+  document.getElementById("pm-sub").textContent = subText;
   renderPortionContent(food);
   document.getElementById("portionModal").classList.add("show");
 }
 
+// 统一计算: 给定克数 → 蛋白/热量
+function calcPortionMacros(g){
+  if(pmSource === "ai"){
+    // AI 项: 按比例缩放 (总量 × 当前克/标准克)
+    const ratio = pmGram / Math.max(1, pmStdGram);
+    return { p: pmBaseP * ratio, c: pmBaseC * ratio };
+  } else {
+    // 本地项: per100g × 克数/100
+    return { p: pmBaseP * g / 100, c: pmBaseC * g / 100 };
+  }
+}
+
 function renderPortionContent(food){
-  // 4 档快选(克数)
+  // 4 档快选(克数 → 实际显示的是"比例")
   let presets;
   if(food.source === "ai"){
-    // AI 项: 基于 AI 返回的真实"标准份"克数, 给出 小份/标准/大份/超大
     const g0 = food.aiGram || 350;
     presets = [
       {g: Math.round(g0*0.6), label:"小份", rec:false},
@@ -1054,8 +1073,12 @@ function renderPortionContent(food){
   list.innerHTML =
     '<div class="calc-row" style="display:block">'
     + presets.map(p=>{
-      const pp = pmBaseP * p.g / 100;
-      const cc = Math.round(pmBaseC * p.g / 100);
+      const oldGram = pmGram;
+      pmGram = p.g;   // 临时设到当前档, 用统一函数算
+      const m = calcPortionMacros(p.g);
+      pmGram = oldGram;   // 还原
+      const pp = m.p;
+      const cc = Math.round(m.c);
       return '<div class="portion-card'+(p.rec?' recommended':'')+'" onclick="setGram('+p.g+', this)" data-g="'+p.g+'">'
         + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+'<span style="color:var(--ink-faint);font-size:11px;font-weight:500;margin-left:5px">'+p.g+'g</span></div>'
         + '<div class="pc-hint">约 '+fmt(pp)+'g 蛋白</div></div>'
@@ -1108,8 +1131,9 @@ function setGram(g, el){
 }
 
 function updatePmLive(){
-  const p = pmBaseP * pmGram / 100;
-  const c = Math.round(pmBaseC * pmGram / 100);
+  const m = calcPortionMacros(pmGram);
+  const p = m.p;
+  const c = Math.round(m.c);
   const today = getTodayTotals();
   const newP = today.protein + p;
   const newC = today.cal + c;
@@ -1124,8 +1148,9 @@ function updatePmLive(){
 
 function confirmPortion(){
   if(!pendingFood) return;
-  const p = +(pmBaseP * pmGram / 100).toFixed(1);
-  const c = Math.round(pmBaseC * pmGram / 100);
+  const m = calcPortionMacros(pmGram);
+  const p = Math.round(m.p * 10) / 10;
+  const c = Math.round(m.c);
   const item = {
     name: pendingFood.name + " " + pmGram + "g",
     protein: p, cal: c,
@@ -1289,9 +1314,8 @@ async function emAddAI(){
     const cat = parts[0] || "其他";
     pendingFood = {
       name: data.food.name, cat: cat, note: "AI 估算",
-      baseP: data.food.per100_protein || 0,
-      baseC: data.food.per100_cal || 0,
-      source:"ai", target:"edit",
+      baseP: data.food.protein, baseC: data.food.cal,   // AI 项: 直接用总量
+      source:"ai", target:"edit", aiGram: data.food.gram || 350
     };
     emInput.value=""; emSugg.classList.remove("show");
     openPortionModal(pendingFood);
