@@ -426,11 +426,25 @@
     background:var(--warm-soft); color:var(--warm); border:none; width:28px; height:28px;
     border-radius:50%; font-size:14px; cursor:pointer; min-width:28px;
   }
-  .ef-add-row{display:flex; gap:6px; margin-top:10px; position:relative}
-  .ef-add-input{flex:1; padding:11px 12px; border:1.5px solid var(--line); border-radius:var(--radius-m); background:var(--card); color:var(--ink); font-size:13px}
+  .ef-add-row{margin-top:12px; position:relative}
+  .ef-add-input{
+    width:100%; padding:13px 14px; border:1.5px solid var(--line); border-radius:var(--radius-m);
+    background:var(--card); color:var(--ink); font-size:14px;
+  }
   .ef-add-input:focus{outline:none; border-color:var(--vital)}
-  .ef-add-btn{padding:11px 16px; background:var(--ink); color:#fff; border:none; border-radius:var(--radius-m); font-size:13px; font-weight:600; cursor:pointer}
-  .ef-suggest{position:absolute; top:calc(100% + 3px); left:0; right:64px; z-index:20; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-m); box-shadow:var(--shadow); max-height:200px; overflow-y:auto; display:none}
+  .ef-btn-row{display:flex; gap:8px; margin-top:9px}
+  .ef-add-btn{
+    flex:1; padding:14px 8px; border:none; border-radius:var(--radius-m);
+    font-size:13px; font-weight:600; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+    transition:transform .12s, opacity .15s;
+  }
+  .ef-add-btn:active{transform:scale(.96); opacity:.85}
+  .ef-add-btn.efb-local{background:var(--bg); color:var(--ink); border:1.5px solid var(--line)}
+  .ef-add-btn.efb-ai{background:var(--ink); color:#fff; border:1.5px solid var(--ink)}
+  .ef-add-btn .efb-icon{font-size:18px; line-height:1}
+  .ef-add-btn .efb-label{font-size:12.5px; font-weight:700}
+  .ef-add-btn .efb-sub{font-size:9.5px; opacity:.75; font-weight:500}
+  .ef-suggest{position:absolute; top:calc(100% + 3px); left:0; right:0; z-index:20; background:var(--card); border:1px solid var(--line); border-radius:var(--radius-m); box-shadow:0 8px 28px rgba(14,42,71,.18); max-height:220px; overflow-y:auto; display:none}
   .ef-suggest.show{display:block}
   .ef-suggest .es-item{padding:10px 12px; border-bottom:1px solid var(--line); cursor:pointer; display:flex; justify-content:space-between; align-items:center}
   .ef-suggest .es-item:last-child{border-bottom:none}
@@ -550,10 +564,20 @@
     <div class="modal-sub" id="em-sub">添加/删除/调整食物,自动重算蛋白和热量</div>
     <div id="em-list"></div>
     <div class="ef-add-row">
-      <input id="em-add-input" class="ef-add-input" placeholder="加食物:输入虾/豆腐/饭… 或沙县鸡腿饭让 AI 算" autocomplete="off">
+      <input id="em-add-input" class="ef-add-input" placeholder="加食物:虾 / 豆腐 / 饭… 或沙县鸡腿饭让 AI 算" autocomplete="off">
       <div id="em-suggest" class="ef-suggest"></div>
-      <button class="ef-add-btn" style="background:var(--ink); color:#fff" onclick="emAddLocal()">本地加</button>
-      <button class="ef-add-btn" style="background:var(--vital); color:#fff" onclick="emAddAI()">🤖 AI 加</button>
+      <div class="ef-btn-row">
+        <button class="ef-add-btn efb-local" onclick="emAddLocal()">
+          <span class="efb-icon">📚</span>
+          <span class="efb-label">本地加</span>
+          <span class="efb-sub">从食材库选</span>
+        </button>
+        <button class="ef-add-btn efb-ai" onclick="emAddAI()">
+          <span class="efb-icon">🤖</span>
+          <span class="efb-label">AI 算</span>
+          <span class="efb-sub">任意菜名算</span>
+        </button>
+      </div>
     </div>
     <button class="modal-footer-btn" onclick="saveMealEdit()">完成</button>
     <div class="footer-note" style="margin-top:10px; font-size:11px">💡 这只是对今天的临时调整,默认菜单永远保留。想全部恢复,点下面按钮。</div>
