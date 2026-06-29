@@ -463,6 +463,38 @@
   .ai-res-cat{display:inline-block; font-size:10px; background:var(--ink); color:#fff; padding:2px 8px; border-radius:5px; font-weight:700; margin-bottom:6px}
   .ai-res-note{font-size:12px; color:var(--ink-soft); margin-top:10px; padding:9px 11px; background:var(--bg); border-radius:8px; line-height:1.5}
 
+  /* ===== 精确克数微调器 ===== */
+  .gram-stepper{display:flex; align-items:center; gap:6px; justify-content:center; margin:6px 0}
+  .gram-btn{
+    width:42px; height:42px; border-radius:10px; border:1.5px solid var(--line);
+    background:var(--card); color:var(--ink); font-size:15px; font-weight:700;
+    cursor:pointer; flex:0 0 auto;
+  }
+  .gram-btn:active{transform:scale(.92); background:var(--vital-soft); border-color:var(--vital)}
+  .gram-display{
+    flex:0 0 auto; min-width:100px; text-align:center; padding:8px 12px;
+    background:var(--bg); border-radius:10px; font-size:17px; font-weight:700; color:var(--ink);
+  }
+  .gram-display .gd-u{font-size:11px; font-weight:500; color:var(--ink-soft); margin-left:3px}
+  /* 实时营养显示 */
+  .gram-live{
+    margin-top:12px; padding:12px; background:var(--vital-soft); border-radius:10px;
+    display:flex; justify-content:space-around; text-align:center;
+  }
+  .gram-live .gl-item .gl-l{font-size:10.5px; color:var(--ink-soft); margin-bottom:2px}
+  .gram-live .gl-item .gl-v{font-size:18px; font-weight:700}
+  .gram-live .gl-item.cal .gl-v{color:var(--accent)}
+  .gram-live .gl-item.pro .gl-v{color:var(--vital)}
+  /* 包装快捷按钮 */
+  .quick-presets{margin-top:14px}
+  .quick-presets .qp-label{font-size:10.5px; color:var(--ink-faint); margin-bottom:6px; text-align:center}
+  .quick-presets .qp-chips{display:flex; flex-wrap:wrap; gap:5px; justify-content:center}
+  .quick-presets .qp-chip{
+    padding:6px 10px; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+    font-size:11px; color:var(--ink); cursor:pointer;
+  }
+  .quick-presets .qp-chip:active{transform:scale(.95); background:var(--vital-soft); border-color:var(--vital)}
+
   /* ===== 便捷功能 ===== */
   /* 快捷食物栏 */
   .quick-bar{display:flex; gap:6px; overflow-x:auto; padding:2px 4px 4px}
@@ -920,72 +952,146 @@ async function aiLookup(foodName){
   aiBusy = false;
 }
 
-/* ============ 份量选择弹层(本地和 AI 统一走这里) ============ */
+/* ============ 份量选择弹层(三合一精确输入) ============ */
 function closePortionModal(){
   document.getElementById("portionModal").classList.remove("show");
 }
 
+// 当前弹层里"实时"的克数和基准(per100g)
+let pmGram = 150;
+let pmBaseP = 0, pmBaseC = 0;
+
 function openPortionModal(food){
   pendingFood = food;
-  // 份量档位: 本地项 = 克数(per100g × 倍数), AI 项 = 比例(标准份 × 比例)
-  let portions;
+  // 把 baseP/baseC 归一化为 per100g (本地库本来就是 per100g; AI 项的"标准份"按 350g 折算)
   if(food.source === "ai"){
-    // AI: 标准/小份/大份/超大份 (按比例)
-    portions = [
-      {label:"小份", hint:"吃得克制", mult:0.6, rec:false},
-      {label:"标准份", hint:"AI 估算的常见量", mult:1.0, rec:true},
-      {label:"大份", hint:"吃得满足", mult:1.3, rec:false},
-      {label:"超大份", hint:"放开吃", mult:1.6, rec:false},
-    ];
+    // AI 返回的是"标准份"总量, 假设标准份≈350g, 反推 per100g
+    pmBaseP = +(food.baseP / 3.5).toFixed(2);
+    pmBaseC = Math.round(food.baseC / 3.5);
+    pmGram = 350;
   } else {
-    // 本地库 per100g: 给 4 个真实克数档
-    portions = [
-      {label:"100g", hint:"少量尝尝", mult:1.0, rec:false},
-      {label:"150g", hint:"标准份", mult:1.5, rec:true},
-      {label:"200g", hint:"正常吃", mult:2.0, rec:false},
-      {label:"250g", hint:"吃饱", mult:2.5, rec:false},
-    ];
+    pmBaseP = food.baseP;
+    pmBaseC = food.baseC;
+    pmGram = 150;
   }
+
   document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(food.source==='ai'?'var(--ink)':'var(--vital)')+'">'+(food.source==='ai'?'AI':'本地')+'</span>'+food.name;
-  document.getElementById("pm-sub").textContent = food.cat + " · 选个份量,自动算好加进去";
-  const list = document.getElementById("pm-list");
-  list.innerHTML = portions.map((p,i)=>{
-    const pp = (food.baseP * p.mult);
-    const cc = Math.round(food.baseC * p.mult);
-    return '<div class="portion-card'+(p.rec?' recommended':'')+'" onclick="choosePortion('+i+')">'
-      + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+'</div>'
-      + '<div class="pc-hint">'+p.hint+'</div></div>'
-      + '<div class="pc-right"><div class="pc-mac num">'+pp+'g 蛋白</div><div class="pc-cal">'+cc+' kcal</div></div>'
-      + '</div>';
-  }).join("");
+  document.getElementById("pm-sub").textContent = food.cat + " · 每100g = "+pmBaseP+"g蛋白 / "+pmBaseC+"kcal";
+
+  renderPortionContent(food);
   document.getElementById("portionModal").classList.add("show");
 }
 
-function choosePortion(idx){
-  if(!pendingFood) return;
-  // 计算实际蛋白/热量
-  // portions 数组在 openPortionModal 里临时生成, 这里重建
-  let portions;
-  if(pendingFood.source === "ai"){
-    portions = [{mult:0.6},{mult:1.0},{mult:1.3},{mult:1.6}];
+function renderPortionContent(food){
+  // 4 档快选(克数)
+  let presets;
+  if(food.source === "ai"){
+    presets = [
+      {g:200, label:"小份", rec:false},
+      {g:350, label:"标准份", rec:true},
+      {g:500, label:"大份", rec:false},
+      {g:650, label:"超大份", rec:false},
+    ];
   } else {
-    portions = [{mult:1.0},{mult:1.5},{mult:2.0},{mult:2.5}];
+    presets = [
+      {g:100, label:"100g", rec:false},
+      {g:150, label:"150g", rec:true},
+      {g:200, label:"200g", rec:false},
+      {g:250, label:"250g", rec:false},
+    ];
   }
-  const mult = portions[idx].mult;
-  const protein = +(pendingFood.baseP * mult).toFixed(1);
-  const cal = Math.round(pendingFood.baseC * mult);
-  // 份量名
-  const portionLabel = (pendingFood.source === "ai")
-    ? ["小份","标准份","大份","超大份"][idx]
-    : ["100g","150g","200g","250g"][idx];
-  // 加入今日
+  // 包装快捷预置(通用, 主要给原料/包装食品)
+  const qp = [
+    {label:"1个鸡蛋", g:50},
+    {label:"1勺蛋白粉", g:30},
+    {label:"1盒牛奶", g:250},
+    {label:"1碗米饭", g:130},
+    {label:"1根香蕉", g:120},
+    {label:"1片吐司", g:30},
+  ];
+
+  const list = document.getElementById("pm-list");
+  list.innerHTML =
+    '<div class="calc-row" style="display:block">'
+    + presets.map(p=>{
+      const pp = +(pmBaseP * p.g / 100).toFixed(1);
+      const cc = Math.round(pmBaseC * p.g / 100);
+      return '<div class="portion-card'+(p.rec?' recommended':'')+'" onclick="setGram('+p.g+', this)" data-g="'+p.g+'">'
+        + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+'<span style="color:var(--ink-faint);font-size:11px;font-weight:500;margin-left:5px">'+p.g+'g</span></div>'
+        + '<div class="pc-hint">约 '+pp+'g 蛋白</div></div>'
+        + '<div class="pc-right"><div class="pc-mac num">'+cc+' kcal</div></div>'
+        + '</div>';
+    }).join("")
+    + '</div>'
+    // 精确微调器
+    + '<div style="font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:14px">—— 或精确输克数 ——</div>'
+    + '<div class="gram-stepper">'
+    +   '<button class="gram-btn" onclick="adjGram(-50)">−50</button>'
+    +   '<button class="gram-btn" onclick="adjGram(-10)">−10</button>'
+    +   '<div class="gram-display num" id="pmGramDisplay">'+pmGram+'<span class="gd-u">g</span></div>'
+    +   '<button class="gram-btn" onclick="adjGram(10)">+10</button>'
+    +   '<button class="gram-btn" onclick="adjGram(50)">+50</button>'
+    + '</div>'
+    // 包装快捷
+    + '<div class="quick-presets">'
+    +   '<div class="qp-label">包装/份量快捷</div>'
+    +   '<div class="qp-chips">'
+    +   qp.map(q=>'<div class="qp-chip" onclick="setGram('+q.g+')">'+q.label+'</div>').join("")
+    +   '</div>'
+    + '</div>'
+    // 实时营养 + 加入按钮
+    + '<div class="gram-live" id="pmLive"></div>'
+    + '<button class="modal-footer-btn" onclick="confirmPortion()" style="margin-top:14px">加入今日</button>';
+
+  updatePmLive();
+}
+
+function adjGram(delta){
+  pmGram = Math.max(5, Math.min(2000, pmGram + delta));
+  document.getElementById("pmGramDisplay").innerHTML = pmGram + '<span class="gd-u">g</span>';
+  // 同步高亮档位卡
+  document.querySelectorAll('.portion-card').forEach(c=>{
+    const g = parseInt(c.dataset.g);
+    c.style.borderColor = (g===pmGram) ? 'var(--vital)' : '';
+    c.style.background = (g===pmGram) ? 'var(--vital-soft)' : '';
+  });
+  updatePmLive();
+}
+function setGram(g, el){
+  pmGram = g;
+  document.getElementById("pmGramDisplay").innerHTML = pmGram + '<span class="gd-u">g</span>';
+  if(el){
+    document.querySelectorAll('.portion-card').forEach(c=>{ c.style.borderColor=''; c.style.background=''; });
+    el.style.borderColor = 'var(--vital)'; el.style.background = 'var(--vital-soft)';
+  }
+  updatePmLive();
+}
+
+function updatePmLive(){
+  const p = +(pmBaseP * pmGram / 100).toFixed(1);
+  const c = Math.round(pmBaseC * pmGram / 100);
+  const today = getTodayTotals();
+  const newP = today.protein + p;
+  const newC = today.cal + c;
+  const proteinOK = newP >= 100;
+  const calOK = newC <= 1600;
+  document.getElementById("pmLive").innerHTML =
+    '<div class="gl-item pro"><div class="gl-l">这次蛋白</div><div class="gl-v num">'+p+'g</div></div>'
+    + '<div class="gl-item cal"><div class="gl-l">这次热量</div><div class="gl-v num">'+c+'k</div></div>'
+    + '<div class="gl-item"><div class="gl-l">加完蛋白 '+ (proteinOK?'✅':'⚠') +'</div><div class="gl-v num" style="color:'+(proteinOK?'var(--vital)':'var(--accent)')+'">'+newP+'g</div></div>'
+    + '<div class="gl-item"><div class="gl-l">加完热量 '+ (calOK?'✅':'⚠') +'</div><div class="gl-v num" style="color:'+(calOK?'var(--vital)':'var(--accent)')+'">'+newC+'k</div></div>';
+}
+
+function confirmPortion(){
+  if(!pendingFood) return;
+  const p = +(pmBaseP * pmGram / 100).toFixed(1);
+  const c = Math.round(pmBaseC * pmGram / 100);
   closePortionModal();
   addFoodToToday({
-    name: pendingFood.name + " " + portionLabel,
-    protein: protein, cal: cal,
+    name: pendingFood.name + " " + pmGram + "g",
+    protein: p, cal: c,
     detail: pendingFood.note, pw: false
   });
-  // 清空输入
   fcFood.value = "";
   fcRes.classList.remove("show");
 }
