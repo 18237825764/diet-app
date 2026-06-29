@@ -784,7 +784,7 @@
 const BASE = {
   breakfast: [
     {name:"牛奶 250ml", detail:"全脂", protein:16, cal:160},
-    {name:"蛋白粉 1 勺", detail:"乳清,混入牛奶搅匀", protein:14, cal:180, pw:true},
+    {name:"蛋白粉 1 勺", detail:"乳清,混入牛奶搅匀", protein:14, cal:197, pw:true},
     {name:"鸡蛋 2 个", detail:"水煮", protein:12, cal:150},
   ],
 };
@@ -823,7 +823,7 @@ const DINNERS = {
     lunchExtra:[],
     dinner:[
       {name:"番茄 / 黄瓜 2–3 个", detail:"只啃,不开火", protein:2, cal:60},
-      {name:"蛋白粉 1 勺(晚间)", detail:"凉水一摇 30 秒", protein:14, cal:180, pw:true},
+      {name:"蛋白粉 1 勺(晚间)", detail:"凉水一摇 30 秒", protein:14, cal:197, pw:true},
     ],
     pwScoopsToday:2,
   },
@@ -842,7 +842,7 @@ const DINNERS = {
 /* p = 蛋白 g, c = 热量 kcal */
 const FOOD_DB = [
   // 主力蛋白
-  {name:"蛋白粉 (你的)", p:28, c:360, cat:"蛋白", note:"50g/勺=14g蛋白"},
+  {name:"蛋白粉 (你的)", p:28, c:394, cat:"蛋白", note:"增肌粉,碳水60%,50g/勺=14g蛋白"},
   {name:"鸡胸肉", p:23, c:110, cat:"蛋白"},
   {name:"瘦牛肉", p:21, c:125, cat:"蛋白"},
   {name:"猪肝", p:20, c:129, cat:"蛋白"},
@@ -1533,7 +1533,7 @@ function buildDefaultMeal(dayKey, mealKey){
     if(wd.type==="std") return dinnerCfg.dinner.slice();
     return [
       {name:"番茄 / 黄瓜 2–3 个", detail:"照常", protein:2, cal:60},
-      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:14, cal:180, pw:true},
+      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:14, cal:197, pw:true},
     ];
   }
   return [];
@@ -1591,7 +1591,7 @@ function copyYesterday(){
 
 /* ③ 快捷食物栏 */
 const QUICK_FOODS = [
-  {name:"蛋白粉 1 勺", detail:"乳清·凉水冲", protein:14, cal:180, pw:true},
+  {name:"蛋白粉 1 勺", detail:"乳清·凉水冲", protein:14, cal:197, pw:true},
   {name:"鸡蛋 1 个", detail:"水煮", protein:6, cal:75, pw:false},
   {name:"鸡胸 100g", detail:"蛋白主力", protein:23, cal:110, pw:false},
   {name:"牛奶 250ml", detail:"全脂", protein:16, cal:160, pw:false},
@@ -1889,7 +1889,7 @@ function buildMeals(dayKey){
   else{
     dinnerFoods = [
       {name:"番茄 / 黄瓜 2–3 个", detail:"照常", protein:2, cal:60},
-      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:14, cal:180, pw:true},
+      {name:"蛋白粉 1 勺", detail:"放纵日务必补这勺", protein:14, cal:197, pw:true},
     ];
   }
   meals.push(resolveMeal("dinner", dinnerFoods, "晚餐", "清淡 / 保肌"));
