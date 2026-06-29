@@ -306,6 +306,31 @@
   .calc-add.show{display:block}
   .calc-add:active{transform:scale(.98)}
 
+  /* ===== AI 查食物 ===== */
+  .ai-row{display:flex; gap:8px; margin-top:12px; align-items:stretch}
+  .ai-input{
+    flex:1; padding:13px 14px; border:1.5px solid var(--ink); border-radius:var(--radius-m);
+    font-size:14px; background:var(--card); color:var(--ink); font-weight:500;
+  }
+  .ai-input:focus{outline:none; border-color:var(--ink)}
+  .ai-input::placeholder{color:var(--ink-faint); font-weight:400}
+  .ai-btn{
+    padding:13px 18px; background:var(--ink); color:#fff; border:none;
+    border-radius:var(--radius-m); font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap;
+  }
+  .ai-btn:active{transform:scale(.97)}
+  .ai-btn:disabled{opacity:.5; cursor:wait}
+  .ai-tag{display:inline-block; font-size:9.5px; background:var(--ink); color:#fff; padding:2px 7px; border-radius:5px; font-weight:700; margin-right:6px; vertical-align:middle}
+  .ai-result{
+    display:none; background:var(--vital-soft); border-radius:var(--radius-m); padding:14px; margin-top:12px;
+  }
+  .ai-result.show{display:block; animation:pop .3s}
+  .ai-result.err{background:var(--warm-soft); color:var(--warm); font-size:13px}
+  .ai-loading{display:none; text-align:center; color:var(--ink-soft); font-size:13px; padding:14px}
+  .ai-loading.show{display:block}
+  .ai-loading .spinner{display:inline-block; width:18px; height:18px; border:2px solid var(--band); border-top-color:var(--vital); border-radius:50%; animation:spin .8s linear infinite; vertical-align:middle; margin-right:8px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
   /* ===== 本周总结 ===== */
   .summary-toggle{
     width:100%; padding:14px; background:linear-gradient(135deg, var(--ink), #1a3a5c);
@@ -570,7 +595,7 @@
     <div class="calc-card">
       <div class="calc-row">
         <div class="suggest-wrap">
-          <input id="fc-food" class="calc-input food-search" placeholder="输入食材名,如:虾 / 猪肝 / 豆腐" autocomplete="off">
+          <input id="fc-food" class="calc-input food-search" placeholder="输入任何食物,如:沙县鸡腿饭 / 烤冷面 / 虾120g" autocomplete="off">
           <div id="fc-suggest" class="suggest-list"></div>
         </div>
         <input id="fc-gram" type="number" class="calc-input food-gram num" placeholder="克数">
@@ -782,17 +807,18 @@ const fcGram = document.getElementById("fc-gram");
 const fcSugg = document.getElementById("fc-suggest");
 const fcRes = document.getElementById("fc-result");
 const fcAddBtn = document.getElementById("fc-add");
-let fcSelected = null;  // 当前选中的食材
+let fcSelected = null;  // 当前选中的食材 {name, protein, cal, detail, isAI}
 
 fcFood.addEventListener("input", ()=>{
   const q = fcFood.value.trim();
   fcSelected = null;
   fcRes.classList.remove("show"); fcAddBtn.classList.remove("show");
   if(!q){ fcSugg.classList.remove("show"); fcSugg.innerHTML=""; return; }
+  // 先查本地库
   const low = q.toLowerCase();
   const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,8);
   if(hits.length===0){
-    fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-faint)">没找到,试试"虾/豆腐/米饭"</div>';
+    fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-soft);font-size:12px">本地没匹配 · 直接按回车,让 <b style="color:var(--ink)">AI</b> 帮你算</div>';
   } else {
     fcSugg.innerHTML = hits.map(f=>
       '<div class="suggest-item" data-name="'+f.name+'">'
@@ -801,25 +827,108 @@ fcFood.addEventListener("input", ()=>{
     ).join("");
     fcSugg.querySelectorAll(".suggest-item").forEach(el=>{
       el.onclick = ()=>{
-        fcSelected = FOOD_DB.find(f=>f.name===el.dataset.name);
-        fcFood.value = fcSelected.name; fcSugg.classList.remove("show");
+        const fd = FOOD_DB.find(f=>f.name===el.dataset.name);
+        fcSelected = {name: fd.name, protein: fd.p, cal: fd.c, detail: fd.cat+" · 本地库"};
+        fcFood.value = fd.name; fcSugg.classList.remove("show");
         fcGram.focus();
       };
     });
   }
   fcSugg.classList.add("show");
 });
-fcFood.addEventListener("blur", ()=>{ setTimeout(()=>fcSugg.classList.remove("show"), 150); });
 
-/* 计算结果 */
+// 关键: 没选本地项时按回车 → 自动走 AI
+fcFood.addEventListener("keydown", (e)=>{
+  if(e.key==="Enter"){
+    e.preventDefault();
+    if(fcSelected){ fcGram.focus(); return; }
+    const q = fcFood.value.trim();
+    if(q.length>=2){ fcSugg.classList.remove("show"); aiLookup(q); }
+  }
+});
+fcFood.addEventListener("blur", ()=>{ setTimeout(()=>fcSugg.classList.remove("show"), 200); });
+
+/* AI 查询: 输入任意菜名 → 直接出结果(已含克数语义) */
+let aiBusy = false;
+async function aiLookup(foodName){
+  if(aiBusy) return;
+  aiBusy = true;
+  const btn = document.getElementById("fc-add"); // 复用按钮区域显示加载
+  fcRes.classList.remove("show");
+  fcRes.innerHTML = '<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:10px">'
+    + '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--band);border-top-color:var(--vital);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px"></span>'
+    + 'AI 正在分析 "<b style="color:var(--ink)">'+foodName+'</b>"...</div>';
+  fcRes.classList.add("show");
+  try{
+    const resp = await fetch("https://ai.sunweiyong.asia/ask", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({food: foodName}),
+    });
+    const data = await resp.json();
+    if(!data.ok){
+      fcRes.innerHTML = '<div style="color:var(--warm);font-size:13px;padding:8px">⚠️ '+data.error+'</div>';
+      aiBusy = false; return;
+    }
+    // AI 返回已经是"按份量的总量", 不再用 gram × per100 算
+    fcSelected = {
+      name: data.food.name + " (AI)",
+      protein: data.food.protein,
+      cal: data.food.cal,
+      detail: data.food.detail,
+      isAI: true,
+    };
+    // 直接显示结果(不再要求填克数)
+    showCalcResult(fcSelected.protein, fcSelected.cal, foodName);
+  }catch(e){
+    fcRes.innerHTML = '<div style="color:var(--warm);font-size:13px;padding:8px">⚠️ 网络错误: '+e.message+'</div>';
+  }
+  aiBusy = false;
+}
+
+/* 显示计算结果(复用现有 UI), 不依赖 fcGram */
+function showCalcResult(protein, cal, label){
+  const today = getTodayTotals();
+  const newP = today.protein + protein;
+  const newC = today.cal + cal;
+  const proteinOK = newP >= 100;
+  const calOK = newC <= 1600;
+  let judge = '<span class="tag '+(proteinOK?'ok':'warn')+'">蛋白 '+(proteinOK?'达标':'不足')+'</span>';
+  judge += '<span class="tag '+(calOK?'ok':'warn')+'">热量 '+(calOK?'可控':'偏高')+'</span>';
+  let advice = "";
+  if(!proteinOK && calOK) advice = '👉 加上后蛋白 <b>'+newP+'</b>g,还差 <b>'+(100-newP).toFixed(0)+'</b>g。建议:再加 1 勺蛋白粉或 2 个蛋。';
+  else if(proteinOK && !calOK) advice = '⚠️ 加上后热量 <b>'+newC+'</b>kcal,超出 <b>'+(newC-1600)+'</b>kcal。建议:下顿吃清淡点。';
+  else if(proteinOK && calOK) advice = '✅ 不错!加上后蛋白 <b>'+newP+'</b>g、热量 <b>'+newC+'</b>kcal,都在合理范围。';
+  else advice = '⚠️ 蛋白 <b>'+newP+'</b>g 不足 + 热量 <b>'+newC+'</b>kcal 偏高。建议换高蛋白低卡项。';
+
+  fcRes.innerHTML =
+      '<div class="cr-line">'+label+' 提供:</div>'
+    + '<div class="cr-big">蛋白 <span class="b num">'+protein+'</span>g &nbsp;·&nbsp; 热量 <span class="'+(calOK?'b':'w')+' num">'+cal+'</span> kcal</div>'
+    + '<div class="cr-divider"></div>'
+    + '<div class="cr-judge">'+judge+'</div>'
+    + '<div class="cr-judge" style="margin-top:8px; color:var(--ink)">'+advice+'</div>'
+    + '<div class="cr-line" style="margin-top:8px">(按今天已吃:'+today.protein+'g / '+today.cal+'kcal 估算)</div>';
+  fcRes.classList.add("show");
+  // 自定义"加到今日"按钮可用
+  const addBtn = document.getElementById("fc-add");
+  addBtn.classList.add("show");
+  addBtn.textContent = "加入今日(AI项)";
+}
+
+/* 计算结果 - 本地库选中的仍用克数算 */
 fcGram.addEventListener("input", ()=>{ calcFood(); });
 
 function calcFood(){
+  // AI 项不依赖克数, 直接显示
+  if(fcSelected && fcSelected.isAI){
+    showCalcResult(fcSelected.protein, fcSelected.cal, fcSelected.name);
+    return;
+  }
   if(!fcSelected || !fcGram.value){ fcRes.classList.remove("show"); fcAddBtn.classList.remove("show"); return; }
   const g = parseFloat(fcGram.value);
   if(!g || g<=0) return;
-  const p = +(fcSelected.p * g / 100).toFixed(1);
-  const c = Math.round(fcSelected.c * g / 100);
+  const p = +(fcSelected.protein * g / 100).toFixed(1);
+  const c = Math.round(fcSelected.cal * g / 100);
   // 今天已吃的
   const today = getTodayTotals();
   const newP = today.protein + p;
@@ -827,7 +936,7 @@ function calcFood(){
   // 判断
   const proteinOK = newP >= 100;
   const calOK = newC <= 1600;   // 减脂上限约 1600
-  const isWarnFood = fcSelected.cat === "高脂";
+  const isWarnFood = (fcSelected.detail || "").includes("高脂");
   // 渲染
   let judge = "";
   judge += '<span class="tag '+(proteinOK?'ok':'warn')+'">蛋白 '+(proteinOK?'达标':'不足')+'</span>';
@@ -863,21 +972,33 @@ function getTodayTotals(){
   return {protein, cal};
 }
 
-/* 把自定义食材加入"今日",作为一个独立的虚拟餐卡 */
+/* 把食物加入"今日"作为一个独立的虚拟餐卡 (兼容本地项/ AI 项) */
 function addCustomToToday(){
-  if(!fcSelected || !fcGram.value) return;
-  const g = parseFloat(fcGram.value);
-  const p = +(fcSelected.p * g / 100).toFixed(1);
-  const c = Math.round(fcSelected.c * g / 100);
+  if(!fcSelected) return;
+  let name, protein, cal, detail;
+  if(fcSelected.isAI){
+    // AI 项: 直接用 AI 算好的总量
+    name = fcSelected.name.replace(" (AI)", "");
+    protein = fcSelected.protein;
+    cal = fcSelected.cal;
+    detail = fcSelected.detail || "AI估算 · 点击可删除";
+  } else {
+    // 本地库项: 用克数 × per100 算
+    if(!fcGram.value) return;
+    const g = parseFloat(fcGram.value);
+    protein = +(fcSelected.protein * g / 100).toFixed(1);
+    cal = Math.round(fcSelected.cal * g / 100);
+    name = fcSelected.name + " " + g + "g";
+    detail = fcSelected.detail || "自定义 · 点击可删除";
+  }
   if(!state.custom) state.custom = {};
   if(!state.custom[state.selectedDay]) state.custom[state.selectedDay] = [];
   if(state.custom[state.selectedDay].length >= 4){ alert("每天最多加 4 个自定义项,够多了~"); return; }
   state.custom[state.selectedDay].push({
-    name: fcSelected.name + " " + g + "g",
-    detail: "自定义 · 点击可删除",
-    protein: p, cal: c, pw:false, custom:true
+    name: name, detail: detail,
+    protein: protein, cal: cal, pw:false, custom:true
   });
-  // 自定义项加入即视为"已吃",用稳定 key (custom|index) 标记
+  // 加入即视为"已吃"
   const newFi = state.custom[state.selectedDay].length - 1;
   state.done[state.selectedDay+"|custom|"+newFi] = true;
   saveState();
