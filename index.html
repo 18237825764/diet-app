@@ -39,7 +39,10 @@
     }
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;padding:0}
+  html,body{margin:0;padding:0; max-width:100%; overflow-x:hidden}
+  /* 全局防溢出: 任何元素最大不超过屏幕宽 */
+  body *{max-width:100%}
+  pre, code, .quick-bar, .day-strip{overflow-x:auto}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
     background:var(--bg); color:var(--ink);
@@ -48,6 +51,8 @@
     padding-bottom:96px;
     padding-top:env(safe-area-inset-top);
     letter-spacing:.1px;
+    width:100%;
+    word-break:break-word;
   }
   /* 数字用更轻盈的现代体 */
   .num{font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; letter-spacing:-.3px}
@@ -393,6 +398,7 @@
     position:fixed; inset:0; z-index:100; background:rgba(14,42,71,.45);
     backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
     display:none; align-items:flex-end; justify-content:center;
+    width:100vw; height:100vh; top:0; left:0;
   }
   .modal-mask.show{display:flex; animation:fadeIn .25s}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
