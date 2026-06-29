@@ -324,6 +324,8 @@
     border-radius:var(--radius-m); font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap;
   }
   .ai-btn:active{transform:scale(.97)}
+  .ai-btn:disabled{opacity:.55; cursor:wait}
+  .ai-btn .spinner-mini{display:none; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px}
   .ai-btn:disabled{opacity:.5; cursor:wait}
   .ai-tag{display:inline-block; font-size:9.5px; background:var(--ink); color:#fff; padding:2px 7px; border-radius:5px; font-weight:700; margin-right:6px; vertical-align:middle}
   .ai-result{
@@ -962,19 +964,40 @@ aiFood.addEventListener("keydown", (e)=>{
   if(e.key==="Enter"){ e.preventDefault(); btnAiLookup(); }
 });
 
+/* 设置 AI loading 态 (主按钮 + 编辑器按钮 + 状态文字) */
+function setAiLoading(busy, foodName){
+  const mainBtn = document.getElementById("ai-btn");
+  const editBtn = document.querySelector(".efb-ai");
+  if(busy){
+    if(mainBtn){
+      mainBtn.disabled = true;
+      mainBtn.dataset.orig = mainBtn.innerHTML;
+      mainBtn.innerHTML = '<span class="spinner-mini" style="display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px"></span>AI 思考中...';
+    }
+    if(editBtn){ editBtn.disabled = true; editBtn.style.opacity = .55; editBtn.dataset.orig = editBtn.innerHTML;
+      editBtn.innerHTML = '<span class="spinner-mini" style="display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite"></span> 思考中';
+    }
+    fcStatus.style.display = "block";
+    fcStatus.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--band);border-top-color:var(--vital);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px"></span>GLM-5.2 正在分析 "<b style="color:var(--ink)">'+foodName+'</b>"...';
+  } else {
+    if(mainBtn){ mainBtn.disabled = false; if(mainBtn.dataset.orig) mainBtn.innerHTML = mainBtn.dataset.orig; }
+    if(editBtn){ editBtn.disabled = false; editBtn.style.opacity = ""; if(editBtn.dataset.orig) editBtn.innerHTML = editBtn.dataset.orig; }
+    fcStatus.style.display = "none";
+  }
+}
+
 async function aiLookup(foodName){
   if(aiBusy) return;
   aiBusy = true;
   fcRes.classList.remove("show");
-  fcStatus.style.display = "block";
-  fcStatus.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--band);border-top-color:var(--vital);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px"></span>AI 正在分析 "<b style="color:var(--ink)">'+foodName+'</b>"...';
+  setAiLoading(true, foodName);
   try{
     const resp = await fetch("https://ai.sunweiyong.asia/ask", {
       method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({food: foodName}),
     });
     const data = await resp.json();
-    fcStatus.style.display = "none";
+    setAiLoading(false);
     if(!data.ok){
       fcRes.innerHTML = '<div style="color:var(--warm);font-size:13px;padding:10px">⚠️ '+data.error+'</div>';
       fcRes.classList.add("show"); aiBusy = false; return;
@@ -989,6 +1012,7 @@ async function aiLookup(foodName){
       source: "ai", target:"today", aiGram: data.food.gram || 350
     });
   }catch(e){
+    setAiLoading(false);
     fcStatus.style.display = "none";
     fcRes.innerHTML = '<div style="color:var(--warm);font-size:13px;padding:10px">⚠️ 网络错误: '+e.message+'</div>';
     fcRes.classList.add("show");
@@ -1296,9 +1320,8 @@ function emAddLocal(){
 async function emAddAI(){
   const q = emInput.value.trim();
   if(!q || q.length<2){ alert('请先在输入框输入菜名(如:沙县鸡腿饭1份),再点 AI 加'); emInput.focus(); return; }
-  // 复用主区域的 AI 查询 (展示在 fcStatus/fcRes 上)
-  fcStatus.style.display = "block";
-  fcStatus.innerHTML = '<span style="display:inline-block;width:16px;height:16px;border:2px solid var(--band);border-top-color:var(--vital);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:8px"></span>AI 正在分析 "<b style="color:var(--ink)">'+q+'</b>"...';
+  // 复用主区域的 AI 查询 (展示在 fcStatus/fcRes 上) + 设置按钮 loading
+  setAiLoading(true, q);
   fcRes.classList.remove("show");
   try{
     const resp = await fetch("https://ai.sunweiyong.asia/ask", {
@@ -1306,7 +1329,7 @@ async function emAddAI(){
       body: JSON.stringify({food: q}),
     });
     const data = await resp.json();
-    fcStatus.style.display = "none";
+    setAiLoading(false);
     if(!data.ok){
       alert("AI 查询失败: "+data.error); return;
     }
@@ -1320,6 +1343,7 @@ async function emAddAI(){
     emInput.value=""; emSugg.classList.remove("show");
     openPortionModal(pendingFood);
   }catch(e){
+    setAiLoading(false);
     fcStatus.style.display = "none";
     alert("网络错误: "+e.message);
   }
