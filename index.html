@@ -1838,14 +1838,14 @@ function updateStats(rerenderMeals){
   // 圆环
   const pct = Math.min(1, eatenP/100);
   document.getElementById("ring-fg").style.strokeDashoffset = RING_CIRC*(1-pct);
-  document.getElementById("ring-num").textContent = fmt(eatenP);
+  document.getElementById("ring-num").textContent = Math.round(eatenP);
   // 英雄区文字
   const remain = Math.max(0, 100 - eatenP);
-  document.getElementById("ri-title").textContent = remain>0 ? ("还差 "+remain+"g 蛋白达标") : "🎉 今日蛋白达标!";
+  document.getElementById("ri-title").textContent = remain>0 ? ("还差 "+Math.round(remain)+"g 蛋白达标") : "🎉 今日蛋白达标!";
   document.getElementById("ri-cal").textContent = eatenC;
   document.getElementById("ri-deficit").textContent = Math.max(0, 2000 - eatenC);
   // 小指标
-  document.getElementById("ms-p").textContent = fmt(eatenP);
+  document.getElementById("ms-p").textContent = Math.round(eatenP);
   document.getElementById("ms-c").textContent = eatenC;
   // 热量进度条 (双线监控)
   const CAL_MAX = 1500, CAL_MIN = 1100;
