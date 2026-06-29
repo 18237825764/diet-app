@@ -652,12 +652,20 @@
   <div class="section">
     <div class="s-head"><div class="s-title">换食材了?算一算</div><div class="s-sub">临时替换 / 检查达不达标</div></div>
     <div class="calc-card">
+      <div class="s-head" style="margin:0 0 10px"><div class="s-title">本地库</div><div class="s-sub">下面会显示常见食材,点了直接选份量</div></div>
       <div class="calc-row">
         <div class="suggest-wrap">
-          <input id="fc-food" class="calc-input food-search" placeholder="输入任何食物,按回车让 AI 算" autocomplete="off">
+          <input id="fc-food" class="calc-input food-search" placeholder="输入食物 (如:虾 / 鸡蛋 / 番茄)" autocomplete="off">
           <div id="fc-suggest" class="suggest-list"></div>
         </div>
-        <button class="calc-add" style="display:block; flex:none; padding:13px 18px" onclick="manualAiLookup()">AI 算</button>
+      </div>
+      <div style="height:1px; background:var(--line); margin:14px 0"></div>
+      <div class="s-head" style="margin:0 0 10px"><div class="s-title">没找到?让 AI 算 🤖</div><div class="s-sub">下面输入任何菜名 + 份量,点按钮算</div></div>
+      <div class="calc-row">
+        <div class="suggest-wrap">
+          <input id="ai-food" class="calc-input food-search" placeholder="如:沙县鸡腿饭1份 / 烤冷面加肠" autocomplete="off">
+        </div>
+        <button id="ai-btn" class="calc-add" style="display:block; flex:none; padding:13px 16px; background:var(--ink); color:#fff; font-weight:700" onclick="btnAiLookup()">🤖 AI 算</button>
       </div>
       <div id="fc-status" style="display:none; text-align:center; padding:14px; color:var(--ink-soft); font-size:13px"></div>
       <div id="fc-result" class="calc-result"></div>
@@ -872,72 +880,57 @@ const FOOD_DB = [
 
 /* ============ 统一的食物输入体验 ============ */
 const fcFood = document.getElementById("fc-food");
+const aiFood = document.getElementById("ai-food");
+const aiBtn = document.getElementById("ai-btn");
 const fcSugg = document.getElementById("fc-suggest");
 const fcRes = document.getElementById("fc-result");
 const fcStatus = document.getElementById("fc-status");
 let aiBusy = false;
-let pendingFood = null;   // 待选份量的食物: {name, cat, note, baseP, baseC, source}
-let inputTimer = null;    // 防抖: 停止输入后自动查
+let pendingFood = null;
+let inputTimer = null;
 
+/* 本地库: 输入联想, 点击选项进份量弹层 */
 fcFood.addEventListener("input", ()=>{
   const q = fcFood.value.trim();
   fcRes.classList.remove("show");
   clearTimeout(inputTimer);
   if(!q){ fcSugg.classList.remove("show"); fcSugg.innerHTML=""; return; }
-  // 先查本地库 (本地项 protein/cal 是 per100g)
   const low = q.toLowerCase();
   const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,6);
   if(hits.length===0){
-    fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-soft);font-size:12px;padding:13px;cursor:pointer" onclick="manualAiLookupFromInput()">🔍 本地没匹配 · <b style="color:var(--vital)">点这里或按「AI 算」让 AI 帮你</b></div>';
-    fcSugg.classList.add("show");
-    // 停止输入 1.8 秒后, 如果还没匹配, 自动走 AI (手机用户不用按回车也行)
-    inputTimer = setTimeout(()=>{ if(!aiBusy && fcFood.value.trim().length>=2) manualAiLookup(); }, 1800);
+    fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-faint);font-size:12px;padding:13px">本地没匹配 · 用下面「<b style="color:var(--ink)">AI 算</b>」输入菜名</div>';
   } else {
     fcSugg.innerHTML = hits.map(f=>
       '<div class="suggest-item" data-name="'+f.name+'" data-p="'+f.p+'" data-c="'+f.c+'" data-cat="'+f.cat+'">'
       + '<div><div class="si-name">'+f.name+'</div><div class="si-cat">'+f.cat+'</div></div>'
       + '<div class="si-mac num">'+f.p+'g蛋白<br>'+f.c+'k per100g</div></div>'
     ).join("");
-    fcSugg.querySelectorAll(".suggest-item").forEach(el=>{
+    fcSugg.querySelectorAll(".suggest-item[data-name]").forEach(el=>{
       el.onclick = ()=>{
         fcFood.value = el.dataset.name; fcSugg.classList.remove("show");
         openPortionModal({
           name: el.dataset.name, cat: el.dataset.cat, note: "本地库 · "+el.dataset.cat,
           baseP: parseFloat(el.dataset.p), baseC: parseFloat(el.dataset.c),
-          source: "local"   // 本地项 baseP/C 是 per100g
+          source: "local"
         });
       };
     });
-    fcSugg.classList.add("show");
   }
+  fcSugg.classList.add("show");
 });
-
-// 回车也触发(电脑/外接键盘)
-fcFood.addEventListener("keydown", (e)=>{
-  if(e.key==="Enter"){
-    e.preventDefault();
-    fcSugg.classList.remove("show");
-    manualAiLookupFromInput();
-  }
-});
-// 失焦: 只关建议框, 不丢输入值
 fcFood.addEventListener("blur", ()=>{ setTimeout(()=>fcSugg.classList.remove("show"), 200); });
 
-// 从输入框当前值触发 AI (按钮/回车/连击都用这个)
-function manualAiLookupFromInput(){
-  const q = fcFood.value.trim();
-  if(q.length<2){ return; }
-  manualAiLookup(q);
-}
-function manualAiLookup(){
+/* AI 输入框: 不自动触发, 只有点按钮才查 */
+/* 按钮触发 */
+function btnAiLookup(){
   if(aiBusy) return;
-  // 优先读输入框当前值
-  let q = fcFood.value.trim();
-  // 兼容旧调用: 如果传了参数就用参数
-  if(arguments.length>=1 && typeof arguments[0]==='string') q = arguments[0];
-  if(q.length<2) return;
+  const q = (aiFood.value || "").trim();
+  if(q.length < 2){ alert('请先在「AI 算」框里输入食物名(如:沙县鸡腿饭1份)'); aiFood.focus(); return; }
   aiLookup(q);
 }
+aiFood.addEventListener("keydown", (e)=>{
+  if(e.key==="Enter"){ e.preventDefault(); btnAiLookup(); }
+});
 
 async function aiLookup(foodName){
   if(aiBusy) return;
