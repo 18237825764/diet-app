@@ -641,9 +641,9 @@
   <div class="section" id="planSection">
     <div class="s-head"><div class="s-title">晚餐方案</div><div class="s-sub">每天可换</div></div>
     <div class="plan-cards" id="planCards">
-      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">清淡</div><div class="pc-desc">番茄/黄瓜<br>不开火</div></div>
-      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">番茄炒蛋</div><div class="pc-desc">1蛋+少油<br>开火做一道</div></div>
-      <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">牛奶馒头</div><div class="pc-desc">牛奶+馒头<br>解饿扛饱</div></div>
+      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">牛奶轻量</div><div class="pc-desc">牛奶+水果<br>~212kcal</div></div>
+      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">加粉(推荐)</div><div class="pc-desc">粉1勺+水果<br>~247kcal</div></div>
+      <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">纯蔬菜</div><div class="pc-desc">番茄黄瓜<br>~60kcal</div></div>
     </div>
   </div>
 
@@ -783,8 +783,8 @@
 /* ============ 菜单数据(逻辑不变) ============ */
 const BASE = {
   breakfast: [
-    {name:"牛奶 250ml", detail:"全脂", protein:8.5, cal:162},
-    {name:"增肌粉 1 勺", detail:"50g,混入牛奶搅匀", protein:14, cal:197, pw:true},
+    {name:"牛奶 250ml", detail:"全脂,3.4g蛋白/100ml", protein:8.5, cal:162},
+    {name:"增肌粉 1 勺", detail:"50g,混入牛奶", protein:14, cal:197, pw:true},
     {name:"鸡蛋 2 个", detail:"水煮", protein:13, cal:144},
   ],
 };
@@ -806,31 +806,36 @@ function getLunch(type){
   }
   return [
     {name:"鸡胸肉 200g", detail:"凉拌/煎/烤,少油", protein:40, cal:234},
-    {name:"荞麦面皮 50g", detail:"凉拌,你的包装值", protein:6.5, cal:164},
+    {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+    {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+    {name:"番茄/黄瓜/蔬菜", detail:"新鲜蔬菜", protein:2.4, cal:51},
   ];
 }
 
 const DINNERS = {
   A: {
-    label:"A 清淡(番茄黄瓜)",
-    lunchExtra:[],
-    dinner:[ {name:"番茄 2–3 个 或 黄瓜 2 根", detail:"只啃,不开火", protein:2, cal:60} ],
-    pwScoopsToday:1,
-  },
-  B: {
-    label:"B 番茄炒蛋(推荐)",
+    label:"A 牛奶+水果(轻)",
     lunchExtra:[],
     dinner:[
-      {name:"番茄炒蛋(1蛋+少油)", detail:"开火做一道", protein:7, cal:150},
+      {name:"牛奶 250ml", detail:"助眠", protein:8.5, cal:162},
+      {name:"番茄/黄瓜/水果", detail:"清淡", protein:1, cal:50},
     ],
     pwScoopsToday:1,
   },
-  C: {
-    label:"C 牛奶+馒头",
+  B: {
+    label:"B 增肌粉+水果(推荐)",
     lunchExtra:[],
     dinner:[
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
-      {name:"馒头 1 个(100g)", detail:"解饿扛饱", protein:7, cal:223},
+      {name:"增肌粉 1 勺(50g)", detail:"水冲/牛奶冲", protein:14, cal:197, pw:true},
+      {name:"番茄/黄瓜/水果", detail:"清淡", protein:1, cal:50},
+    ],
+    pwScoopsToday:2,
+  },
+  C: {
+    label:"C 纯水果蔬菜",
+    lunchExtra:[],
+    dinner:[
+      {name:"番茄 2-3 个/黄瓜 2 根", detail:"极轻量", protein:2, cal:60},
     ],
     pwScoopsToday:1,
   },
