@@ -641,9 +641,9 @@
   <div class="section" id="planSection">
     <div class="s-head"><div class="s-title">晚餐方案</div><div class="s-sub">每天可换</div></div>
     <div class="plan-cards" id="planCards">
-      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">纯清淡</div><div class="pc-desc">只啃番茄/黄瓜<br>中午加鸡胸</div></div>
-      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">加粉推荐</div><div class="pc-desc">番茄/黄瓜<br>+ 蛋白粉1勺</div></div>
-      <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">加蛋</div><div class="pc-desc">番茄/黄瓜<br>+ 2个水煮蛋</div></div>
+      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">纯清淡</div><div class="pc-desc">只啃番茄/黄瓜<br>晚上最省事</div></div>
+      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">加蛋推荐</div><div class="pc-desc">番茄/黄瓜<br>+ 2个水煮蛋</div></div>
+      <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">馒头炒菜</div><div class="pc-desc">番茄/黄瓜<br>+ 1个馒头</div></div>
     </div>
   </div>
 
@@ -814,26 +814,26 @@ function getLunch(type){
 
 const DINNERS = {
   A: {
-    label:"A 纯清淡 · 中午鸡胸+50g",
-    lunchExtra:[ {name:"鸡胸肉 +50g(补蛋白)", detail:"中午提前吃进去", protein:10, cal:59} ],
+    label:"A 纯清淡",
+    lunchExtra:[],
     dinner:[ {name:"番茄 2–3 个 或 黄瓜 2 根", detail:"只啃,不开火", protein:2, cal:60} ],
     pwScoopsToday:1,
   },
   B: {
-    label:"B 加粉 · 晚上加 1 勺",
+    label:"B 加蛋(推荐)",
     lunchExtra:[],
     dinner:[
       {name:"番茄 / 黄瓜 2–3 个", detail:"只啃,不开火", protein:2, cal:60},
-      {name:"蛋白粉 1 勺(晚间)", detail:"凉水一摇 30 秒", protein:14, cal:197, pw:true},
+      {name:"水煮鸡蛋 2 个", detail:"免开火,剥壳即食", protein:13, cal:144},
     ],
-    pwScoopsToday:2,
+    pwScoopsToday:1,
   },
   C: {
-    label:"C 加蛋 · 晚餐 2 个水煮蛋",
+    label:"C 馒头+炒菜",
     lunchExtra:[],
     dinner:[
       {name:"番茄 / 黄瓜 2–3 个", detail:"只啃,不开火", protein:2, cal:60},
-      {name:"水煮鸡蛋 2 个", detail:"免开火,剥壳即食", protein:12, cal:150},
+      {name:"馒头 1 个(100g)", detail:"解饿扛饱", protein:7, cal:223},
     ],
     pwScoopsToday:1,
   },
