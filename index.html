@@ -248,6 +248,26 @@
 
   .footer-note{text-align:center; font-size:11px; color:var(--ink-faint); margin:18px 4px 0; line-height:1.6}
 
+  /* ===== 体重折线图 + 目标进度 ===== */
+  .weight-chart-wrap{margin-top:12px; background:var(--bg); border-radius:var(--radius-m); padding:12px 8px}
+  .weight-chart-wrap canvas{width:100%; height:140px; display:block}
+  .chart-empty{text-align:center; color:var(--ink-faint); font-size:12px; padding:30px 10px}
+  .chart-legend{display:flex; justify-content:space-around; font-size:10px; color:var(--ink-faint); margin-top:6px}
+  .chart-legend .leg-dot{display:inline-block; width:8px; height:8px; border-radius:2px; vertical-align:middle; margin-right:4px}
+  /* 目标进度条 */
+  .goal-progress{margin-top:14px; padding:16px; background:linear-gradient(135deg, var(--vital-soft), var(--bg)); border-radius:var(--radius-l)}
+  .gp-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px}
+  .gp-head .gp-title{font-size:13px; font-weight:700; color:var(--ink)}
+  .gp-head .gp-eta{font-size:11px; color:var(--green); font-weight:600}
+  .gp-bar-wrap{position:relative; height:14px; background:var(--band); border-radius:8px; overflow:hidden}
+  .gp-bar-fill{height:100%; background:linear-gradient(90deg, var(--vital), #5BB85B); border-radius:8px; transition:width .8s cubic-bezier(.22,1,.36,1)}
+  .gp-bar-goal{position:absolute; right:0; top:-2px; bottom:-2px; width:3px; background:var(--accent); border-radius:2px}
+  .gp-labels{display:flex; justify-content:space-between; font-size:10px; color:var(--ink-faint); margin-top:5px}
+  .gp-stats{display:flex; justify-content:space-around; margin-top:12px; text-align:center}
+  .gp-stats .gs-item .gs-l{font-size:10px; color:var(--ink-faint)}
+  .gp-stats .gs-item .gs-v{font-size:16px; font-weight:700; color:var(--ink); margin-top:2px}
+  .gp-stats .gs-item .gs-v.green{color:var(--vital)}
+
   /* 底栏 */
   .tabbar{
     position:fixed; bottom:0; left:0; right:0; z-index:50;
@@ -718,6 +738,34 @@
         <button class="weight-save" onclick="saveWeight()">保存</button>
       </div>
       <div id="weightList" style="margin-top:10px"></div>
+      <div class="weight-chart-wrap" id="weightChartWrap">
+        <canvas id="weightChart"></canvas>
+        <div class="chart-empty" id="chartEmpty">称完体重就自动画趋势图啦</div>
+        <div class="chart-legend" id="chartLegend" style="display:none">
+          <span><span class="leg-dot" style="background:var(--vital)"></span>体重</span>
+          <span><span class="leg-dot" style="background:var(--accent)"></span>趋势线</span>
+          <span><span class="leg-dot" style="background:var(--ink-faint)"></span>目标 131</span>
+        </div>
+      </div>
+      <div class="goal-progress" id="goalProgress" style="display:none">
+        <div class="gp-head">
+          <span class="gp-title">🎯 减脂进度</span>
+          <span class="gp-eta" id="gpEta"></span>
+        </div>
+        <div class="gp-bar-wrap">
+          <div class="gp-bar-fill" id="gpBarFill" style="width:0%"></div>
+          <div class="gp-bar-goal"></div>
+        </div>
+        <div class="gp-labels">
+          <span id="gpLabelStart">起点</span>
+          <span id="gpLabelGoal">目标 131</span>
+        </div>
+        <div class="gp-stats">
+          <div class="gs-item"><div class="gs-l">已减</div><div class="gs-v green" id="gpLost">0</div></div>
+          <div class="gs-item"><div class="gs-l">还差</div><div class="gs-v" id="gpRemain">0</div></div>
+          <div class="gs-item"><div class="gs-l">完成度</div><div class="gs-v green" id="gpPct">0%</div></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2135,23 +2183,183 @@ function saveWeight(){
 }
 function renderWeights(){
   const c = document.getElementById("weightList"); c.innerHTML = "";
-  if(state.weights.length===0){
-    c.innerHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:12px;padding:8px">还没有记录,称完填进来</div>'; return;
+  const ws = state.weights || [];
+  if(ws.length===0){
+    c.innerHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:12px;padding:8px">还没有记录,称完填进来</div>';
+    drawWeightChart(ws);
+    updateGoalProgress(ws);
+    return;
   }
-  const arr = state.weights.slice().reverse();
+  const arr = ws.slice().reverse();
   arr.forEach((w, i)=>{
-    const prev = state.weights[state.weights.length-1-i-1];
+    const prev = ws[ws.length-1-i-1];
     let deltaText=""; let cls="";
     if(prev){ const d = w.val - prev.val;
-      if(d<0){ deltaText="↓ "+Math.abs(d).toFixed(1)+" 斤"; cls="down"; }
-      else if(d>0){ deltaText="↑ "+d.toFixed(1)+" 斤"; cls="up"; }
-      else{ deltaText="持平"; cls="down"; }
+      if(d<0){ deltaText="\u2193 "+Math.abs(d).toFixed(1)+" \u65a4"; cls="down"; }
+      else if(d>0){ deltaText="\u2191 "+d.toFixed(1)+" \u65a4"; cls="up"; }
+      else{ deltaText="\u6301\u5e73"; cls="down"; }
     }
     const el = document.createElement("div"); el.className="wl-item";
     el.innerHTML = '<span class="wl-date">'+w.date+'</span><span class="wl-val num">'+w.val+'</span>'
       + (deltaText?('<span class="wl-delta '+cls+'">'+deltaText+'</span>'):'');
     c.appendChild(el);
   });
+  drawWeightChart(ws);
+  updateGoalProgress(ws);
+}
+
+/* ===== 体重折线图 (Canvas 手绘) ===== */
+function drawWeightChart(ws){
+  const canvas = document.getElementById("weightChart");
+  const empty = document.getElementById("chartEmpty");
+  const legend = document.getElementById("chartLegend");
+  if(!canvas) return;
+  if(ws.length < 2){
+    if(empty) empty.style.display = "block";
+    if(legend) legend.style.display = "none";
+    canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+    return;
+  }
+  if(empty) empty.style.display = "none";
+  if(legend) legend.style.display = "flex";
+
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth, H = 140;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+
+  const vals = ws.map(w=>w.val);
+  const goal = 131;
+  const minVal = Math.min(...vals, goal) - 1;
+  const maxVal = Math.max(...vals) + 1;
+  const range = maxVal - minVal || 1;
+  const pad = {l:8, r:8, t:15, b:20};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+
+  // 背景
+  ctx.fillStyle = "transparent";
+  ctx.clearRect(0,0,W,H);
+
+  // 目标线(虚线)
+  const goalY = pad.t + ch * (1 - (goal - minVal) / range);
+  ctx.strokeStyle = "rgba(112,120,128,0.3)";
+  ctx.setLineDash([4,3]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, goalY); ctx.lineTo(W-pad.r, goalY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "rgba(112,120,128,0.5)";
+  ctx.font = "9px sans-serif"; ctx.textAlign = "left";
+  ctx.fillText("\u76ee\u6807 131", pad.l+2, goalY-3);
+
+  // 折线
+  const pts = ws.map((w,i)=>{
+    const x = pad.l + (ws.length===1 ? cw/2 : cw * i / (ws.length-1));
+    const y = pad.t + ch * (1 - (w.val - minVal) / range);
+    return {x,y,val:w.val,date:w.date};
+  });
+
+  // 填充渐变
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.forEach(p=>ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, H-pad.b);
+  ctx.lineTo(pts[0].x, H-pad.b);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, H-pad.b);
+  grad.addColorStop(0, "rgba(61,220,151,0.25)");
+  grad.addColorStop(1, "rgba(61,220,151,0.02)");
+  ctx.fillStyle = grad; ctx.fill();
+
+  // 折线本体
+  ctx.strokeStyle = "#3DDC97"; ctx.lineWidth = 2.5;
+  ctx.lineJoin = "round"; ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.forEach(p=>ctx.lineTo(p.x, p.y));
+  ctx.stroke();
+
+  // 趋势线(线性回归, 虚线)
+  if(pts.length >= 3){
+    const n = pts.length;
+    const sumX = pts.reduce((s,p,i)=>s+i,0);
+    const sumY = pts.reduce((s,p)=>s+p.y,0);
+    const sumXY = pts.reduce((s,p,i)=>s+i*p.y,0);
+    const sumX2 = pts.reduce((s,p,i)=>s+i*i,0);
+    const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX || 1);
+    const intercept = (sumY - slope*sumX) / n;
+    const tx0 = pad.l, ty0 = intercept;
+    const tx1 = W-pad.r, ty1 = slope*(n-1) + intercept;
+    ctx.strokeStyle = "rgba(176,48,40,0.4)"; ctx.setLineDash([5,3]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(tx0, ty0); ctx.lineTo(tx1, ty1); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // 数据点
+  pts.forEach((p,i)=>{
+    const isLast = i === pts.length-1;
+    ctx.fillStyle = isLast ? "#3DDC97" : "#fff";
+    ctx.strokeStyle = "#3DDC97"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, isLast?4.5:3, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    // 最后一个点标数值
+    if(isLast){
+      ctx.fillStyle = "#1F2D3D"; ctx.font = "bold 10px sans-serif"; ctx.textAlign="center";
+      ctx.fillText(p.val+"\u65a4", p.x, p.y-8);
+    }
+    // 第一个点也标
+    if(i===0){
+      ctx.fillStyle = "rgba(31,45,61,0.6)"; ctx.font = "9px sans-serif"; ctx.textAlign="center";
+      ctx.fillText(p.val+"", p.x, p.y-7);
+    }
+  });
+
+  // X轴日期(只标首尾)
+  ctx.fillStyle = "rgba(112,120,128,0.5)"; ctx.font = "8.5px sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText(pts[0].date, pts[0].x-5, H-4);
+  ctx.textAlign = "right";
+  ctx.fillText(pts[pts.length-1].date, pts[pts.length-1].x+5, H-4);
+}
+
+/* ===== 目标进度可视化 ===== */
+function updateGoalProgress(ws){
+  const wrap = document.getElementById("goalProgress");
+  if(!wrap) return;
+  if(ws.length === 0){ wrap.style.display = "none"; return; }
+  wrap.style.display = "block";
+  const startW = ws[0].val;
+  const currentW = ws[ws.length-1].val;
+  const goal = 131;
+  const total = startW - goal;        // 总需减
+  const done = startW - currentW;     // 已减
+  const remain = currentW - goal;     // 还差
+  const pct = total > 0 ? Math.min(100, Math.max(0, Math.round(done / total * 100))) : 100;
+
+  document.getElementById("gpBarFill").style.width = pct + "%";
+  document.getElementById("gpLabelStart").textContent = "\u8d77\u70b9 " + startW + "\u65a4";
+  document.getElementById("gpLabelGoal").textContent = "\u76ee\u6807 " + goal + "\u65a4";
+  document.getElementById("gpLost").textContent = (done>=0?"-":"+") + Math.abs(done).toFixed(1) + "\u65a4";
+  document.getElementById("gpRemain").textContent = remain>0 ? remain.toFixed(1)+"\u65a4" : "\u5df2\u8fbe\u6807\ud83c\udf89";
+  document.getElementById("gpPct").textContent = pct + "%";
+
+  // 预计达标日(根据已有数据的日均速度)
+  const eta = document.getElementById("gpEta");
+  if(ws.length >= 2 && done > 0 && remain > 0){
+    const days = ws.length - 1;
+    const dailyRate = done / days;       // 斤/天
+    if(dailyRate > 0){
+      const daysLeft = Math.ceil(remain / dailyRate);
+      const target = new Date();
+      target.setDate(target.getDate() + daysLeft);
+      const m = (target.getMonth()+1), d = target.getDate();
+      eta.textContent = "\u9884\u8ba1 " + m + "\u6708" + d + "\u65e5\u8fbe\u6807 (\u7ea6" + daysLeft + "\u5929)";
+    } else {
+      eta.textContent = "\u9700\u52a0\u6cb9\uff0c\u51cf\u80a5\u505c\u6ede\u4e2d";
+    }
+  } else if(remain <= 0){
+    eta.textContent = "\u5df2\u8fbe\u6807\ud83c\udf89";
+  } else {
+    eta.textContent = "\u591a\u79f0\u51e0\u6b21\u770b\u901f\u5ea6";
+  }
 }
 
 function resetToday(){
