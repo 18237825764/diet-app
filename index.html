@@ -1017,7 +1017,7 @@ fcFood.addEventListener("input", ()=>{
   clearTimeout(inputTimer);
   if(!q){ fcSugg.classList.remove("show"); fcSugg.innerHTML=""; return; }
   const low = q.toLowerCase();
-  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,6);
+  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.name.includes(q) || f.cat.includes(q) || (f.note&&f.note.includes(q))).slice(0,8);
   if(hits.length===0){
     fcSugg.innerHTML = '<div class="suggest-item" style="color:var(--ink-faint);font-size:12px;padding:13px">本地没匹配 · 用下面「<b style="color:var(--ink)">AI 算</b>」输入菜名</div>';
   } else {
@@ -1415,7 +1415,7 @@ emInput.addEventListener("input", ()=>{
   const q = emInput.value.trim();
   if(!q){ emSugg.classList.remove("show"); emSugg.innerHTML=""; return; }
   const low = q.toLowerCase();
-  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.cat.includes(q)).slice(0,6);
+  const hits = FOOD_DB.filter(f=> f.name.toLowerCase().includes(low) || f.name.includes(q) || f.cat.includes(q) || (f.note&&f.note.includes(q))).slice(0,8);
   if(hits.length===0){
     emSugg.innerHTML = '<div class="es-item" style="color:var(--ink-faint);font-size:12px">没找到 · 点"添加"输入手动项 (按 100g 算)</div>';
     emSugg.classList.add("show");
