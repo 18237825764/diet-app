@@ -1168,6 +1168,13 @@ let pmStdGram = 100;      // 本地项=100g; AI 项=aiGram (标准份总克数)
 
 function openPortionModal(food){
   pendingFood = food;
+  // 全局自动检测: 名字含"鸡蛋"/"鹌鹑蛋"的, 强制走 egg 模式(按个/按份, 不按g)
+  if(!food.source || food.source === "local"){
+    const fn = (food.name||"");
+    if(fn.indexOf("鸡蛋")>=0 || fn.indexOf("鹌鹑蛋")>=0 || fn.indexOf("蛋 1")>=0 || fn.indexOf("蛋1")>=0){
+      food.source = "egg";
+    }
+  }
   pmSource = food.source || "local";
   pmBaseP = food.baseP || 0;   // 本地=per100蛋白; AI=标准份总蛋白
   pmBaseC = food.baseC || 0;   // 本地=per100热量; AI=标准份总热量
@@ -1206,6 +1213,10 @@ function calcPortionMacros(g){
 }
 
 function renderPortionContent(food){
+  // 兜底: 强制检测
+  if((!food.source || food.source === "local") && (food.name||"").indexOf("蛋")>=0){
+    food.source = "egg";
+  }
   // 4 档快选(克数 → 实际显示的是"比例")
   let presets;
   if(food.source === "ai"){
