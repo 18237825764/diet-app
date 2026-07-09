@@ -1456,7 +1456,8 @@ const MEAL_EDIT_TARGET = "edit";  // 份量弹层确认后,会根据此标志决
 
 function addFoodPrompt(fd){
   // 本地库点击建议: 走份量弹层
-  pendingFood = {name: fd.name, cat: fd.cat, note: "本地库 · "+fd.cat, baseP: fd.p, baseC: fd.c, source:"local", target:"edit"};
+  const isEgg = fd.name.indexOf("鸡蛋") >= 0 || fd.name.indexOf("鹌鹑蛋") >= 0;
+  pendingFood = {name: fd.name, cat: fd.cat, note: "本地库 · "+fd.cat, baseP: fd.p, baseC: fd.c, source: isEgg ? "egg" : "local", target:"edit"};
   emInput.value=""; emSugg.classList.remove("show");
   openPortionModal(pendingFood);
 }
@@ -1468,7 +1469,8 @@ function emAddLocal(){
   const low = q.toLowerCase();
   const f = FOOD_DB.find(x=> x.name.toLowerCase().includes(low) || x.cat.includes(q));
   if(f){
-    pendingFood = {name: f.name, cat: f.cat, note: "本地库 · "+f.cat, baseP: f.p, baseC: f.c, source:"local", target:"edit"};
+    const isEgg = f.name.indexOf("鸡蛋") >= 0 || f.name.indexOf("鹌鹑蛋") >= 0;
+    pendingFood = {name: f.name, cat: f.cat, note: "本地库 · "+f.cat, baseP: f.p, baseC: f.c, source: isEgg ? "egg" : "local", target:"edit"};
     emInput.value=""; emSugg.classList.remove("show");
     openPortionModal(pendingFood);
   } else {
