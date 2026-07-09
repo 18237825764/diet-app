@@ -1260,15 +1260,18 @@ function renderPortionContent(food){
       pmGram = oldGram;   // 还原
       const pp = m.p;
       const cc = Math.round(m.c);
+      const isEggType = food.source === "egg";
+      const gramLabel = isEggType ? '' : '<span style="color:var(--ink-faint);font-size:11px;font-weight:500;margin-left:5px">'+p.g+'g</span>';
       return '<div class="portion-card'+(p.rec?' recommended':'')+'" onclick="setGram('+p.g+', this)" data-g="'+p.g+'">'
-        + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+'<span style="color:var(--ink-faint);font-size:11px;font-weight:500;margin-left:5px">'+p.g+'g</span></div>'
+        + '<div class="pc-left"><div class="pc-name">'+p.label+(p.rec?'<span class="portion-rec-tag">推荐</span>':'')+gramLabel+'</div>'
         + '<div class="pc-hint">约 '+fmt(pp)+'g 蛋白</div></div>'
         + '<div class="pc-right"><div class="pc-mac num">'+cc+' kcal</div></div>'
         + '</div>';
     }).join("")
     + '</div>'
-    // 精确微调器
-    + '<div style="font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:14px">—— 或精确输克数 ——</div>'
+    // 精确微调器 + 包装快捷 (鸡蛋/鹌鹑蛋不显示)
+    + (food.source === "egg" ? '' :
+      '<div style="font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:14px">—— 或精确输克数 ——</div>'
     + '<div class="gram-stepper">'
     +   '<button class="gram-btn" onclick="adjGram(-50)">−50</button>'
     +   '<button class="gram-btn" onclick="adjGram(-10)">−10</button>'
@@ -1276,14 +1279,14 @@ function renderPortionContent(food){
     +   '<button class="gram-btn" onclick="adjGram(10)">+10</button>'
     +   '<button class="gram-btn" onclick="adjGram(50)">+50</button>'
     + '</div>'
-    // 包装快捷
     + '<div class="quick-presets">'
     +   '<div class="qp-label">包装/份量快捷</div>'
     +   '<div class="qp-chips">'
     +   qp.map(q=>'<div class="qp-chip" onclick="setGram('+q.g+')">'+q.label+'</div>').join("")
     +   '</div>'
     + '</div>'
-    // 实时营养 + 加入按钮
+    )
+    // 实时营养 + 加入按钮 (所有模式都显示)
     + '<div class="gram-live" id="pmLive"></div>'
     + '<button class="modal-footer-btn" onclick="confirmPortion()" style="margin-top:14px">加入今日</button>';
 
