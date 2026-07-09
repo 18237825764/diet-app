@@ -902,7 +902,7 @@ const FOOD_DB = [
   {name:"三文鱼", p:20, c:208, cat:"蛋白"},
   {name:"金枪鱼罐头 (水浸)", p:22, c:116, cat:"蛋白"},
   {name:"章鱼 / 八爪鱼", p:14, c:82, cat:"蛋白"},
-  {name:"鸡蛋 (全)", p:13, c:144, cat:"蛋白"},
+  {name:"鸡蛋 1 个", p:6.5, c:72, cat:"蛋白", note:"约50g,按个算"},
   {name:"蛋白 (纯)", p:11, c:48, cat:"蛋白"},
   {name:"希腊酸奶", p:10, c:60, cat:"蛋白"},
   {name:"北豆腐 (老豆腐)", p:16, c:116, cat:"蛋白"},
@@ -1028,10 +1028,12 @@ fcFood.addEventListener("input", ()=>{
     fcSugg.querySelectorAll(".suggest-item[data-name]").forEach(el=>{
       el.onclick = ()=>{
         fcFood.value = el.dataset.name; fcSugg.classList.remove("show");
+        // 鸡蛋特殊处理: 按"个"算
+        const isEgg = el.dataset.name.indexOf("鸡蛋") >= 0;
         openPortionModal({
           name: el.dataset.name, cat: el.dataset.cat, note: "本地库 · "+el.dataset.cat,
           baseP: parseFloat(el.dataset.p), baseC: parseFloat(el.dataset.c),
-          source: "local", target:"today"
+          source: isEgg ? "egg" : "local", target:"today"
         });
       };
     });
@@ -1168,8 +1170,8 @@ function openPortionModal(food){
   pmSource = food.source || "local";
   pmBaseP = food.baseP || 0;   // 本地=per100蛋白; AI=标准份总蛋白
   pmBaseC = food.baseC || 0;   // 本地=per100热量; AI=标准份总热量
-  pmStdGram = (pmSource === "ai") ? (food.aiGram || 350) : 100;
-  pmGram = (pmSource === "ai") ? (food.aiGram || 350) : 150;
+  pmStdGram = (pmSource === "ai") ? (food.aiGram || 350) : (pmSource === "egg" ? 1 : 100);
+  pmGram = (pmSource === "ai") ? (food.aiGram || 350) : (pmSource === "egg" ? 2 : 150);
 
   document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(pmSource==='ai'?'var(--ink)':'var(--vital)')+'">'+(pmSource==='ai'?'AI':'本地')+'</span>'+food.name;
   // 副标题: AI 显示"标准份=XXX", 本地显示"每100g=XXX"
@@ -1190,6 +1192,10 @@ function calcPortionMacros(g){
     // AI 项: 按比例缩放 (总量 × 当前克/标准克)
     const ratio = pmGram / Math.max(1, pmStdGram);
     return { p: pmBaseP * ratio, c: pmBaseC * ratio };
+  } else if(pmSource === "egg"){
+    // 鸡蛋: 直接按"个"算 (g=几个, 每个蛋白6.5g/72kcal)
+    const eggs = Math.max(1, Math.round(g));
+    return { p: pmBaseP * eggs, c: pmBaseC * eggs };
   } else {
     // 本地项: per100g × 克数/100
     return { p: pmBaseP * g / 100, c: pmBaseC * g / 100 };
@@ -1207,6 +1213,13 @@ function renderPortionContent(food){
       {g: Math.round(g0*1.3), label:"大份", rec:false},
       {g: Math.round(g0*1.6), label:"超大份", rec:false},
     ];
+  } else if(food.source === "egg"){
+    presets = [
+      {g:1, label:"1 个", rec:false},
+      {g:2, label:"2 个", rec:true},
+      {g:3, label:"3 个", rec:false},
+      {g:4, label:"4 个", rec:false},
+    ];
   } else {
     presets = [
       {g:100, label:"100g", rec:false},
@@ -1217,7 +1230,7 @@ function renderPortionContent(food){
   }
   // 包装快捷预置(通用, 主要给原料/包装食品)
   const qp = [
-    {label:"1个鸡蛋", g:50},
+    {label:"鸡蛋1个", g:"egg"},
     {label:"1勺蛋白粉", g:30},
     {label:"1盒牛奶", g:250},
     {label:"1碗米饭", g:130},
