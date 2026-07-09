@@ -975,7 +975,6 @@ const FOOD_DB = [
   {name:"荞麦面皮", p:12.5, c:327, cat:"碳水", note:"你的包装值1367kJ/100g"},
   {name:"玉米(熟)", p:4, c:112, cat:"碳水"},
   {name:"紫菜(汤)", p:1.5, c:30, cat:"蔬菜", note:"一碗紫菜蛋花汤"},
-  {name:"生菜", p:1.4, c:15, cat:"蔬菜"},
   {name:"油麦菜", p:1.4, c:15, cat:"蔬菜"},
   {name:"上海青", p:1.4, c:15, cat:"蔬菜"},
   {name:"荷兰豆", p:3, c:30, cat:"蔬菜"},
@@ -1461,7 +1460,7 @@ emInput.addEventListener("input", ()=>{
   emSugg.classList.add("show");
 });
 emInput.addEventListener("blur", ()=>{ setTimeout(()=>emSugg.classList.remove("show"), 150); });
-emInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); addFoodToMeal(); } });
+emInput.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); emAddLocal(); } });
 
 const MEAL_EDIT_TARGET = "edit";  // 份量弹层确认后,会根据此标志决定加到今日/编辑器
 
