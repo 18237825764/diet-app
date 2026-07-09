@@ -903,7 +903,7 @@ const FOOD_DB = [
   {name:"金枪鱼罐头 (水浸)", p:22, c:116, cat:"蛋白"},
   {name:"章鱼 / 八爪鱼", p:14, c:82, cat:"蛋白"},
   {name:"鸡蛋 1 个", p:6.5, c:72, cat:"蛋白", note:"约50g,按个算"},
-  {name:"鹌鹑蛋(盐焗/香卤)3个", p:3.8, c:55, cat:"零食", note:"一份3个剥壳约25g,218kcal/100g"},
+  {name:"鹌鹑蛋(盐焗/香卤)1份", p:3.8, c:55, cat:"零食", note:"1份3个剥壳约25g,218kcal/100g"},
   {name:"蛋白 (纯)", p:11, c:48, cat:"蛋白"},
   {name:"希腊酸奶", p:10, c:60, cat:"蛋白"},
   {name:"北豆腐 (老豆腐)", p:16, c:116, cat:"蛋白"},
@@ -1030,7 +1030,7 @@ fcFood.addEventListener("input", ()=>{
       el.onclick = ()=>{
         fcFood.value = el.dataset.name; fcSugg.classList.remove("show");
         // 鸡蛋特殊处理: 按"个"算
-        const isEgg = el.dataset.name.indexOf("鸡蛋") >= 0;
+        const isEgg = el.dataset.name.indexOf("鸡蛋") >= 0 || el.dataset.name.indexOf("鹌鹑蛋") >= 0;
         openPortionModal({
           name: el.dataset.name, cat: el.dataset.cat, note: "本地库 · "+el.dataset.cat,
           baseP: parseFloat(el.dataset.p), baseC: parseFloat(el.dataset.c),
@@ -1172,13 +1172,15 @@ function openPortionModal(food){
   pmBaseP = food.baseP || 0;   // 本地=per100蛋白; AI=标准份总蛋白
   pmBaseC = food.baseC || 0;   // 本地=per100热量; AI=标准份总热量
   pmStdGram = (pmSource === "ai") ? (food.aiGram || 350) : (pmSource === "egg" ? 1 : 100);
-  pmGram = (pmSource === "ai") ? (food.aiGram || 350) : (pmSource === "egg" ? 2 : 150);
+  pmGram = (pmSource === "ai") ? (food.aiGram || 350) : (pmSource === "egg" ? ((food.name||"").indexOf("鹌鹑")>=0 ? 1 : 2) : 150);
 
   document.getElementById("pm-title").innerHTML = '<span class="ai-res-cat" style="background:'+(pmSource==='ai'?'var(--ink)':'var(--vital)')+'">'+(pmSource==='ai'?'AI':'本地')+'</span>'+food.name;
-  // 副标题: AI 显示"标准份=XXX", 本地显示"每100g=XXX"
+  // 副标题
   let subText;
   if(pmSource === "ai"){
     subText = food.cat + " · 标准份("+pmStdGram+"g) ≈ "+pmBaseP+"g蛋白 / "+pmBaseC+"kcal";
+  } else if(pmSource === "egg"){
+    subText = food.cat + " · 每份 = "+fmt(pmBaseP)+"g蛋白 / "+pmBaseC+"kcal";
   } else {
     subText = food.cat + " · 每100g = "+fmt(pmBaseP)+"g蛋白 / "+pmBaseC+"kcal";
   }
@@ -1215,12 +1217,21 @@ function renderPortionContent(food){
       {g: Math.round(g0*1.6), label:"超大份", rec:false},
     ];
   } else if(food.source === "egg"){
-    presets = [
-      {g:1, label:"1 个", rec:false},
-      {g:2, label:"2 个", rec:true},
-      {g:3, label:"3 个", rec:false},
-      {g:4, label:"4 个", rec:false},
-    ];
+    const isQ蛋 = (food.name||"").indexOf("鹌鹑") >= 0;
+    if(isQ蛋){
+      presets = [
+        {g:1, label:"1 份(3个)", rec:true},
+        {g:2, label:"2 份(6个)", rec:false},
+        {g:3, label:"3 份(9个)", rec:false},
+      ];
+    } else {
+      presets = [
+        {g:1, label:"1 个", rec:false},
+        {g:2, label:"2 个", rec:true},
+        {g:3, label:"3 个", rec:false},
+        {g:4, label:"4 个", rec:false},
+      ];
+    }
   } else {
     presets = [
       {g:100, label:"100g", rec:false},
