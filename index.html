@@ -837,13 +837,53 @@ const BASE = {
   ],
 };
 
-function getLunch(type){
-  return [
-    {name:"一荤炒菜(蛋/肉)", detail:"番茄炒蛋/青椒肉丝/芹菜炒香干", protein:14, cal:250},
-    {name:"一素炒菜", detail:"醋溜白菜/蒜蓉菠菜/凉拌黄瓜", protein:3, cal:80},
-    {name:"北豆腐 100g", detail:"补蛋白,便宜", protein:16, cal:116},
-    {name:"米饭 1 碗(130g)", detail:"碳水主食", protein:3.4, cal:170},
-  ];
+function getLunch(type, dayKey){
+  // 周一到周五不重样, 常见便宜蔬菜+豆腐+米饭
+  const lunchMenus = {
+    mon: [
+      {name:"番茄炒蛋(2蛋少油)", detail:"经典家常", protein:13, cal:215},
+      {name:"醋溜白菜", detail:"酸香下饭", protein:2, cal:60},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    tue: [
+      {name:"青椒肉丝(瘦肉80g)", detail:"下饭神菜", protein:18, cal:250},
+      {name:"蒜蓉菠菜", detail:"补铁", protein:4, cal:65},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    wed: [
+      {name:"芹菜炒香干肉丝(肉60g)", detail:"香干+瘦肉", protein:16, cal:260},
+      {name:"凉拌黄瓜", detail:"清口", protein:1, cal:35},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    thu: [
+      {name:"土豆丝炒肉丝(肉60g)", detail:"家常硬菜", protein:15, cal:280},
+      {name:"蒜蓉西葫芦", detail:"清淡", protein:2, cal:60},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    fri: [
+      {name:"青椒炒蛋(2蛋)", detail:"蛋白双补", protein:18, cal:240},
+      {name:"醋溜白菜", detail:"酸香下饭", protein:2, cal:60},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    sat: [
+      {name:"番茄炒蛋(2蛋少油)", detail:"周末经典", protein:13, cal:215},
+      {name:"蒜蓉菠菜", detail:"补铁", protein:4, cal:65},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+    sun: [
+      {name:"青椒肉丝(瘦肉80g)", detail:"周末加餐", protein:18, cal:250},
+      {name:"凉拌黄瓜", detail:"清口", protein:1, cal:35},
+      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+    ],
+  };
+  return lunchMenus[dayKey] || lunchMenus.mon;
 }
 
 const DINNERS = {
@@ -1637,7 +1677,7 @@ function buildDefaultMeal(dayKey, mealKey){
   if(mealKey==="breakfast") return BASE.breakfast.slice();
   if(mealKey==="lunch"){
     let lf = [];
-    if(wd.type==="std"){ lf = getLunch("std").slice().concat(dinnerCfg.lunchExtra); }
+    if(wd.type==="std"){ lf = getLunch("std", dayKey).slice().concat(dinnerCfg.lunchExtra); }
     else if(wd.type==="cheat-noodle"){ lf = getLunch("cheat-noodle"); }
     else{ lf = getLunch("cheat-bbq"); }
     return lf;
@@ -1993,7 +2033,7 @@ function buildMeals(dayKey){
   meals.push(resolveMeal("breakfast", BASE.breakfast.slice(), "早餐", "启动蛋白合成"));
 
   let lunchFoods;
-  if(wd.type==="std"){ lunchFoods = getLunch("std").slice().concat(dinnerCfg.lunchExtra); }
+  if(wd.type==="std"){ lunchFoods = getLunch("std", dayKey).slice().concat(dinnerCfg.lunchExtra); }
   else if(wd.type==="cheat-noodle"){ lunchFoods = getLunch("cheat-noodle"); }
   else{ lunchFoods = getLunch("cheat-bbq"); }
   meals.push(resolveMeal("lunch", lunchFoods, "午餐", typeTag(wd.type)||"主力"));
