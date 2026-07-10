@@ -838,52 +838,12 @@ const BASE = {
 };
 
 function getLunch(type, dayKey){
-  // 周一到周五不重样, 常见便宜蔬菜+豆腐+米饭
-  const lunchMenus = {
-    mon: [
-      {name:"番茄炒蛋(2蛋少油)", detail:"经典家常", protein:13, cal:215},
-      {name:"醋溜白菜", detail:"酸香下饭", protein:2, cal:60},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    tue: [
-      {name:"青椒肉丝(瘦肉80g)", detail:"下饭神菜", protein:18, cal:250},
-      {name:"蒜蓉菠菜", detail:"补铁", protein:4, cal:65},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    wed: [
-      {name:"芹菜炒香干肉丝(肉60g)", detail:"香干+瘦肉", protein:16, cal:260},
-      {name:"凉拌黄瓜", detail:"清口", protein:1, cal:35},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    thu: [
-      {name:"土豆丝炒肉丝(肉60g)", detail:"家常硬菜", protein:15, cal:280},
-      {name:"蒜蓉西葫芦", detail:"清淡", protein:2, cal:60},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    fri: [
-      {name:"青椒炒蛋(2蛋)", detail:"蛋白双补", protein:18, cal:240},
-      {name:"醋溜白菜", detail:"酸香下饭", protein:2, cal:60},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    sat: [
-      {name:"番茄炒蛋(2蛋少油)", detail:"周末经典", protein:13, cal:215},
-      {name:"蒜蓉菠菜", detail:"补铁", protein:4, cal:65},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-    sun: [
-      {name:"青椒肉丝(瘦肉80g)", detail:"周末加餐", protein:18, cal:250},
-      {name:"凉拌黄瓜", detail:"清口", protein:1, cal:35},
-      {name:"北豆腐 100g", detail:"补蛋白", protein:16, cal:116},
-      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-    ],
-  };
-  return lunchMenus[dayKey] || lunchMenus.mon;
+  return [
+    {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+    {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+    {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+    {name:"番茄/黄瓜/蔬菜", detail:"新鲜蔬菜", protein:2.4, cal:51},
+  ];
 }
 
 const DINNERS = {
