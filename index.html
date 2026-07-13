@@ -661,8 +661,8 @@
   <div class="section" id="planSection">
     <div class="s-head"><div class="s-title">晚餐方案</div><div class="s-sub">每天可换</div></div>
     <div class="plan-cards" id="planCards">
-      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">牛奶轻量</div><div class="pc-desc">牛奶+水果<br>~212kcal</div></div>
-      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">加粉(推荐)</div><div class="pc-desc">粉1勺+水果<br>~247kcal</div></div>
+      <div class="plan-card" data-d="A"><div class="pc-letter">A</div><div class="pc-name">纯乳清(推荐)</div><div class="pc-desc">乳清1勺+水果<br>~143kcal</div></div>
+      <div class="plan-card" data-d="B"><div class="pc-letter">B</div><div class="pc-name">牛奶轻量</div><div class="pc-desc">牛奶+水果<br>~212kcal</div></div>
       <div class="plan-card" data-d="C"><div class="pc-letter">C</div><div class="pc-name">纯蔬菜</div><div class="pc-desc">番茄黄瓜<br>~60kcal</div></div>
     </div>
   </div>
@@ -838,39 +838,75 @@ const BASE = {
 };
 
 function getLunch(type, dayKey){
-  return [
-    {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
-    {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
-    {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
-    {name:"番茄/黄瓜/蔬菜", detail:"新鲜蔬菜", protein:2.4, cal:51},
-  ];
+  // 周一到周天不重样, 一道菜+米饭+牛奶
+  const lunchMenus = {
+    mon: [
+      {name:"西葫芦炒蛋(3蛋)", detail:"1个西葫芦+3蛋+少油", protein:20, cal:305},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
+    ],
+    tue: [
+      {name:"冬瓜牛肉(瘦肉150g)", detail:"冬瓜200g+瘦牛肉150g+少油", protein:31, cal:245},
+      {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
+      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
+    ],
+    wed: [
+      {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+      {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+      {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+      {name:"番茄/黄瓜", detail:"蔬菜", protein:2.4, cal:51},
+    ],
+    thu: [
+      {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+      {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+      {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+      {name:"番茄/黄瓜", detail:"蔬菜", protein:2.4, cal:51},
+    ],
+    fri: [
+      {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+      {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+      {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+      {name:"番茄/黄瓜", detail:"蔬菜", protein:2.4, cal:51},
+    ],
+    sat: [
+      {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+      {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+      {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+      {name:"番茄/黄瓜", detail:"蔬菜", protein:2.4, cal:51},
+    ],
+    sun: [
+      {name:"鸡胸肉 150g", detail:"凉拌/煎/烤,少油", protein:30, cal:176},
+      {name:"鸡蛋 1 个", detail:"水煮", protein:6.5, cal:72},
+      {name:"荞麦面皮 50g", detail:"碳水主食", protein:6.5, cal:164},
+      {name:"番茄/黄瓜", detail:"蔬菜", protein:2.4, cal:51},
+    ],
+  };
+  return lunchMenus[dayKey] || lunchMenus.mon;
 }
 
 const DINNERS = {
   A: {
-    label:"A 牛奶+水果(轻)",
+    label:"A 纯乳清+水果(推荐)",
     lunchExtra:[],
     dinner:[
-      {name:"牛奶 250ml", detail:"助眠", protein:8.5, cal:162},
-      {name:"番茄/黄瓜/水果", detail:"清淡", protein:1, cal:50},
-    ],
-    pwScoopsToday:1,
-  },
-  B: {
-    label:"B 增肌粉+水果(推荐)",
-    lunchExtra:[],
-    dinner:[
-      {name:"增肌粉 1 勺(50g)", detail:"水冲/牛奶冲", protein:14, cal:197, pw:true},
-      {name:"番茄/黄瓜/水果", detail:"清淡", protein:1, cal:50},
+      {name:"纯乳清 1 勺(25g)", detail:"水/奶冲,23g蛋白", protein:23, cal:93, pw:true},
+      {name:"番茄/黄瓜/水果", detail:"维生素", protein:1, cal:50},
     ],
     pwScoopsToday:2,
   },
-  C: {
-    label:"C 纯水果蔬菜",
+  B: {
+    label:"B 牛奶+水果(轻)",
     lunchExtra:[],
     dinner:[
-      {name:"番茄 2-3 个/黄瓜 2 根", detail:"极轻量", protein:2, cal:60},
+      {name:"牛奶 250ml", detail:"助眠", protein:8.5, cal:162},
+      {name:"番茄/黄瓜/水果", detail:"维生素", protein:1, cal:50},
     ],
+    pwScoopsToday:1,
+  },
+  C: {
+    label:"C 纯蔬菜",
+    lunchExtra:[],
+    dinner:[ {name:"番茄 2-3 个/黄瓜 2 根", detail:"极轻量", protein:2, cal:60} ],
     pwScoopsToday:1,
   },
 };
@@ -1967,7 +2003,7 @@ function loadState(){
     if(!s.custom) s.custom = {};
     return s;
   }}catch(e){}
-  return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"B", weights:[], mealOverrides:{}, custom:{} };
+  return { selectedDay: WEEK[0].key, dinnerPlan:{}, done:{}, defaultPlan:"A", weights:[], mealOverrides:{}, custom:{} };
 }
 function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 function getPlan(dayKey){ return state.dinnerPlan[dayKey] || state.defaultPlan; }
