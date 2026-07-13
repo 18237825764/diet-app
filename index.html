@@ -830,56 +830,43 @@
 <script>
 /* ============ 菜单数据(逻辑不变) ============ */
 function getBreakfast(dayKey){
-  const base = [
+  return [
     {name:"牛奶 250ml", detail:"全脂,3.4g蛋白/100ml", protein:8.5, cal:162},
+    {name:"纯乳清 1 勺", detail:"25g,混入牛奶", protein:23, cal:93, pw:true},
     {name:"鸡蛋 2 个", detail:"水煮", protein:13, cal:144},
   ];
-  // 周一还剩一点增肌粉, 其他天纯乳清
-  if(dayKey === "mon"){
-    base.splice(1, 0, {name:"增肌粉 1 勺", detail:"50g,最后一勺", protein:14, cal:197, pw:true});
-  } else {
-    base.splice(1, 0, {name:"纯乳清 1 勺", detail:"25g,90g蛋白/100g", protein:23, cal:93, pw:true});
-  }
-  return base;
 }
 
 function getLunch(type, dayKey){
   // 周一到周天不重样, 一道菜+米饭+牛奶
   const lunchMenus = {
     mon: [
-      {name:"西葫芦炒蛋(3蛋)", detail:"1个西葫芦+3蛋+少油", protein:20, cal:305},
+      {name:"西葫芦炒蛋(4蛋+少油)", detail:"1个西葫芦+4蛋", protein:26, cal:377},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     tue: [
-      {name:"冬瓜炒猪肉(瘦肉150g)", detail:"冬瓜200g+瘦猪肉150g+少油", protein:31, cal:290},
+      {name:"冬瓜炒猪肉(瘦肉150g)", detail:"冬瓜200g+瘦猪肉150g+少油", protein:33, cal:410},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     wed: [
-      {name:"番茄炒蛋(3蛋+少油)", detail:"番茄2个+3蛋", protein:20, cal:305},
+      {name:"番茄炒蛋(4蛋+少油)", detail:"番茄2个+4蛋", protein:26, cal:377},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     thu: [
       {name:"土豆烧猪肉(瘦肉150g)", detail:"土豆1个+瘦猪肉150g+少油", protein:33, cal:410},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     fri: [
       {name:"茄子烧猪肉(瘦肉100g)", detail:"茄子200g+瘦猪肉100g+少油", protein:23, cal:320},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     sat: [
-      {name:"冬瓜虾米蛋汤(3蛋)", detail:"冬瓜+虾米+3蛋炖汤", protein:21, cal:220},
+      {name:"冬瓜虾米蛋汤(4蛋)", detail:"冬瓜+虾米+4蛋炖汤", protein:27, cal:292},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
     sun: [
       {name:"番茄土豆烧猪肉(瘦肉100g)", detail:"番茄+土豆+猪肉一锅炖", protein:24, cal:380},
       {name:"米饭 1 碗", detail:"130g", protein:3.4, cal:170},
-      {name:"牛奶 250ml", detail:"补蛋白", protein:8.5, cal:162},
     ],
   };
   return lunchMenus[dayKey] || lunchMenus.mon;
