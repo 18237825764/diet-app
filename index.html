@@ -829,13 +829,19 @@
 
 <script>
 /* ============ 菜单数据(逻辑不变) ============ */
-const BASE = {
-  breakfast: [
+function getBreakfast(dayKey){
+  const base = [
     {name:"牛奶 250ml", detail:"全脂,3.4g蛋白/100ml", protein:8.5, cal:162},
-    {name:"纯乳清 1 勺", detail:"25g,90g蛋白/100g", protein:23, cal:93, pw:true},
     {name:"鸡蛋 2 个", detail:"水煮", protein:13, cal:144},
-  ],
-};
+  ];
+  // 周一还剩一点增肌粉, 其他天纯乳清
+  if(dayKey === "mon"){
+    base.splice(1, 0, {name:"增肌粉 1 勺", detail:"50g,最后一勺", protein:14, cal:197, pw:true});
+  } else {
+    base.splice(1, 0, {name:"纯乳清 1 勺", detail:"25g,90g蛋白/100g", protein:23, cal:93, pw:true});
+  }
+  return base;
+}
 
 function getLunch(type, dayKey){
   // 周一到周天不重样, 一道菜+米饭+牛奶
@@ -1665,7 +1671,7 @@ function buildDefaultMeal(dayKey, mealKey){
   const wd = WEEK.find(w=>w.key===dayKey);
   const plan = getPlan(dayKey);
   const dinnerCfg = DINNERS[plan];
-  if(mealKey==="breakfast") return BASE.breakfast.slice();
+  if(mealKey==="breakfast") return getBreakfast(dayKey).slice();
   if(mealKey==="lunch"){
     let lf = [];
     if(wd.type==="std"){ lf = getLunch("std", dayKey).slice().concat(dinnerCfg.lunchExtra); }
@@ -2021,7 +2027,7 @@ function buildMeals(dayKey){
     return {key:mealKey, name, sub, foods: ov ? ov.slice() : defaultFoods, overridden: !!ov};
   }
 
-  meals.push(resolveMeal("breakfast", BASE.breakfast.slice(), "早餐", "启动蛋白合成"));
+  meals.push(resolveMeal("breakfast", getBreakfast(dayKey).slice(), "早餐", "启动蛋白合成"));
 
   let lunchFoods;
   if(wd.type==="std"){ lunchFoods = getLunch("std", dayKey).slice().concat(dinnerCfg.lunchExtra); }
